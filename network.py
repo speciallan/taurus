@@ -224,7 +224,7 @@ def run_keras(X_train, y_train, X_test, y_test):
 
     print('\n-----------------------keras-----------------------')
 
-    # Building a model
+    # Building a models
     model = models.Sequential()
     model.add(layers.Dense(25, input_dim=2, activation='relu'))
     model.add(layers.Dense(50, activation='relu'))
@@ -239,7 +239,7 @@ def run_keras(X_train, y_train, X_test, y_test):
     history = model.fit(X_train, y_train, epochs=10, verbose=1)
     print(model.summary())
 
-    # Y_test_hat = model.predict_classes(X_test)
+    # Y_test_hat = models.predict_classes(X_test)
     # acc_test = accuracy_score(y_test, Y_test_hat)
     # print("Test set accuracy: {:.2f} - Goliath".format(acc_test))
 
