@@ -215,7 +215,7 @@ def run_my_network(X_train, y_train, X_test, y_test):
     print('\n----------------------network----------------------')
 
     params, cost_history, accuracy_history = train(X_train, y_train, NN_ARCHITECTURE, epochs=10, learning_rate=0.01)
-    # print('cost:', cost_history, '\n', 'acc:', accuracy_history)
+    print('cost:', cost_history, '\n', 'acc:', accuracy_history)
 
     # 可视化
     # plt.imshow()
@@ -237,11 +237,11 @@ def run_keras(X_train, y_train, X_test, y_test):
     # print(X_train.shape, y_train.shape)
 
     history = model.fit(X_train, y_train, epochs=10, verbose=1)
-    print(model.summary())
+    # print(model.summary())
 
-    # Y_test_hat = models.predict_classes(X_test)
-    # acc_test = accuracy_score(y_test, Y_test_hat)
-    # print("Test set accuracy: {:.2f} - Goliath".format(acc_test))
+    y_test_hat = model.predict(X_test)
+    acc_test = accuracy_score(y_test, y_test_hat)
+    print("Test set accuracy: {:.2f} - Goliath".format(acc_test))
 
 if __name__ == '__main__':
 
