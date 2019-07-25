@@ -19,7 +19,7 @@ from sklearn.datasets import make_moons
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from tensorflow.python.keras import layers, models
-from spe import *
+from utils.spe import spe
 
 NN_ARCHITECTURE = [
     {'input_dim': 2, 'output_dim': 25, 'activation': 'relu'}, # 25*2 2*1 = 25*1
@@ -185,7 +185,7 @@ def update(params_values, grads_values, nn_architecture, learning_rate):
     return params_values
 
 # 训练网络
-def train(X, Y, nn_architecture, epochs, learning_rate):
+def train(X, y, nn_architecture, epochs, learning_rate):
 
     params_values = init_layers(nn_architecture)
     cost_history = []
@@ -193,15 +193,16 @@ def train(X, Y, nn_architecture, epochs, learning_rate):
 
     for i in range(epochs):
 
-        Y_hat, cashe = forward(X, params_values, nn_architecture)
+        y_hat, cashe = forward(X, params_values, nn_architecture)
+        print(y_hat)
 
-        cost = get_cost_value(Y_hat, Y)
+        cost = get_cost_value(y_hat, y)
         cost_history.append(cost)
 
-        accuracy = get_accuracy_value(Y_hat, Y)
+        accuracy = get_accuracy_value(y_hat, y)
         accuracy_history.append(accuracy)
 
-        grads_values = backward(Y_hat, Y, cashe, params_values, nn_architecture)
+        grads_values = backward(y_hat, y, cashe, params_values, nn_architecture)
         params_values = update(params_values, grads_values, nn_architecture, learning_rate)
 
         print('Epoch ' + str(i+1) + '/' + str(epochs))
@@ -214,7 +215,7 @@ def run_my_network(X_train, y_train, X_test, y_test):
 
     print('\n----------------------network----------------------')
 
-    params, cost_history, accuracy_history = train(X_train, y_train, NN_ARCHITECTURE, epochs=10, learning_rate=0.01)
+    params, cost_history, accuracy_history = train(X_train, y_train, NN_ARCHITECTURE, epochs=100, learning_rate=0.01)
     print('cost:', cost_history, '\n', 'acc:', accuracy_history)
 
     # 可视化
@@ -245,15 +246,17 @@ def run_keras(X_train, y_train, X_test, y_test):
 
 if __name__ == '__main__':
 
-    # number of samples in the data set
-    N_SAMPLES = 1000
+    batch_size = 100
 
     # ratio between training and test sets
-    TEST_SIZE = 0.1
+    TEST_SIZE = 0.2
 
     # my network
-    X = np.random.randn(N_SAMPLES, 2, 1)
-    y = np.random.randn(N_SAMPLES, 1, 1)
+    # input_size = 2, output_size = 1
+    X = np.random.randn(batch_size, 2, 1)
+    # y = np.random.randn(batch_size, 1, 1)
+    y = np.ones(shape=(batch_size, 1, 1))
+    # spe(X.shape,y.shape, X[0], y[0])
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=TEST_SIZE, random_state=42)
     # print(X_train.shape, y_train.shape, X_test.shape, y_test.shape)
@@ -277,7 +280,7 @@ if __name__ == '__main__':
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=TEST_SIZE, random_state=42)
     # print(X_train.shape, y_train.shape, X_test.shape, y_test.shape, np.array([X_train[0]]).shape)
 
-    run_keras(np.array([X_train[0]]), np.array([y_train[0]]), np.array([X_test[0]]), np.array([y_test[0]]))
+    # run_keras(np.array([X_train[0]]), np.array([y_train[0]]), np.array([X_test[0]]), np.array([y_test[0]]))
     # run_keras(X_train, y_train, X_test, y_test)
 
 
