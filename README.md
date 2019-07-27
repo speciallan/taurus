@@ -1,7 +1,7 @@
 # Taurus
 A Smart Framework For Machine Learning
 
-动态图 注解参数 协作框架
+静态动态图 注解参数 协作框架
 
 以后网络越来越大，不是一个人能简单完成的了，也会涉及到多个模块的连接，测试。
 

@@ -194,10 +194,11 @@ def train(X, y, nn_architecture, epochs, learning_rate):
     for i in range(epochs):
 
         y_hat, cashe = forward(X, params_values, nn_architecture)
-        print(y_hat)
+        # print(y_hat)
 
         cost = get_cost_value(y_hat, y)
         cost_history.append(cost)
+        # spe(cost, y_hat)
 
         accuracy = get_accuracy_value(y_hat, y)
         accuracy_history.append(accuracy)
@@ -215,7 +216,7 @@ def run_my_network(X_train, y_train, X_test, y_test):
 
     print('\n----------------------network----------------------')
 
-    params, cost_history, accuracy_history = train(X_train, y_train, NN_ARCHITECTURE, epochs=100, learning_rate=0.01)
+    params, cost_history, accuracy_history = train(X_train, y_train, NN_ARCHITECTURE, epochs=10, learning_rate=0.01)
     print('cost:', cost_history, '\n', 'acc:', accuracy_history)
 
     # 可视化

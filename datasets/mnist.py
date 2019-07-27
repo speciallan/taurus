@@ -3,24 +3,48 @@
 # Author:Speciallan
 
 import numpy as np
+from struct import unpack, unpack_from
 
 
-def load_data(path='mnist.npz'):
-    """Loads the MNIST dataset.
+def load_data(path):
 
-    # Arguments
-        path: path where to cache the dataset locally
-            (relative to ~/.keras/datasets).
+    X_train = read_image(path + 'train-images-idx3-ubyte')
+    y_train = read_label(path + 'train-labels-idx1-ubyte')
+    X_test = read_image(path + 't10k-images-idx3-ubyte')
+    y_test = read_label(path + 't10k-labels-idx1-ubyte')
 
-    # Returns
-        Tuple of Numpy arrays: `(x_train, y_train), (x_test, y_test)`.
-    """
-    path = get_file(path,
-                    origin='https://s3.amazonaws.com/img-datasets/mnist.npz',
-                    file_hash='8a61469f7ea1b51cbae51d4f78837e45')
-    f = np.load(path)
-    x_train, y_train = f['x_train'], f['y_train']
-    x_test, y_test = f['x_test'], f['y_test']
-    f.close()
+    X_train = normalize(X_train)
+    y_train = one_hot(y_train)
+    y_train = y_train.reshape(y_train.shape[0], y_train.shape[1], 1)
 
-    return (x_train, y_train), (x_test, y_test)
+    X_test = normalize(X_test)
+    y_test = one_hot(y_test)
+    y_test = y_test.reshape(y_test.shape[0], y_test.shape[1], 1)
+
+    return (X_train, y_train), (X_test, y_test)
+
+
+def read_image(path):
+    with open(path, 'rb') as f:
+        magic, num, rows, cols = unpack('>4I', f.read(16))
+        img = np.fromfile(f, dtype=np.uint8).reshape(num, 784, 1)  # 在这里可以调整图片读入格式
+    return img
+
+
+def read_label(path):
+    with open(path, 'rb') as f:
+        magic, num = unpack('>2I', f.read(8))
+        label = np.fromfile(f, dtype=np.uint8)
+    return label
+
+
+def normalize(image):
+    img = image.astype(np.float32) / 255.0
+    return img
+
+
+def one_hot(label):
+    lab = np.zeros((label.size, 10))
+    for i, row in enumerate(lab):
+        row[label[i]] = 1
+    return lab

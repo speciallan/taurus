@@ -8,8 +8,8 @@ import os
 import sys
 
 
-# BACKEND = 'taurus'
-BACKEND = 'tensorflow'
+BACKEND = 'taurus'
+# BACKEND = 'tensorflow'
 
 if 'TAURUS_BACKEND' in os.environ:
     backend = os.environ['TAURUS_BACKEND']
@@ -17,15 +17,15 @@ if 'TAURUS_BACKEND' in os.environ:
         BACKEND = backend
 
 if BACKEND == 'taurus':
-    sys.stdout.write('Taurus uses Taurus as backend.\n')
+    sys.stdout.write('Using Taurus as backend.\n')
     from .taurus_backend import *
 
 elif BACKEND == 'tensorflow':
-    sys.stdout.write('Taurus uses Tensorflow as backend.\n')
+    sys.stdout.write('Using Tensorflow as backend.\n')
     from .tensorflow_backend import *
 
 else:
-    sys.stdout.write('Taurus uses no backend.\n')
+    sys.stdout.write('Using no backend.\n')
     exit()
 
 
