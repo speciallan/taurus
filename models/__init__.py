@@ -14,8 +14,8 @@ class Model():
     biases = None
 
     generator = None
-    batch_size = 32
-    epochs = 10
+    batch_size = None
+    epochs = None
 
     optimizer = optimizers.SGD()
 
@@ -30,13 +30,16 @@ class Model():
     def set_optimizer(self, optimizer):
         self.optimizer = optimizer
 
-    def forward(self, x):
+    def _forward(self, x):
         raise NotImplementedError
 
-    def backprop(self, x, y):
+    def _backprop(self, x, y):
         raise NotImplementedError
 
-    def update(self, x_batch, y_batch):
+    def _update(self, x_batch, y_batch):
+        raise NotImplementedError
+
+    def _validate(self, x, y):
         raise NotImplementedError
 
     def train(self, x, y, batch_size, epochs, x_valid, y_valid):
@@ -52,8 +55,17 @@ class Model():
         self.batch_size = batch_size
         self.epochs = epochs
 
-    def inference(self):
+    def inference(self, x):
         raise NotImplementedError
 
     def evaluate(self, x, y):
         raise NotImplementedError
+
+    def save(self, filepath):
+        pass
+
+    def save_weigths(self, filepath):
+        pass
+
+    def load_weights(self, filepath):
+        pass

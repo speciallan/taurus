@@ -4,20 +4,29 @@
 
 import sys
 sys.path.append('..')
+import argparse
 
+import numpy as np
 from taurus.datasets.mnist import load_data
 from taurus.models.mlp import MLP
+from taurus.models.cnn import CNN
 from taurus.optimizers import SGD
 from taurus.preprocessing.generators import ImageGenerator
 from taurus.config import current_config as config
+from sklearn.model_selection import train_test_split
+from taurus.utils.spe import spe
+from taurus.operations.convolution import padding
 
+def mlp():
 
-if __name__ == '__main__':
+    data_path = config.data_path + '/MNIST/'
+    model_path = './model.h5'
 
-    data_path = '/home/speciallan/Documents/python/data/MNIST/'
-    weights_path = './model.h5'
+    (X_train, y_train), _ = load_data(data_path)
 
-    (X_train, y_train), (X_test, y_test) = load_data(data_path)
+    X_train, X_valid, y_train, y_valid = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
+
+    # print(X_train.shape, X_valid.shape)
 
     train_generator = ImageGenerator(X_train, y_train,
                                      batch_size=config.batch_size,
@@ -32,9 +41,54 @@ if __name__ == '__main__':
     history = model.train(x=X_train,
                           y=y_train,
                           batch_size=30,
+                          epochs=10,
+                          x_valid=X_valid,
+                          y_valid=y_valid)
+
+    model.save(model_path)
+
+
+
+
+def cnn():
+
+    data_path = config.data_path + '/MNIST/'
+    model_path = './model.h5'
+
+    (X_train, y_train), _ = load_data(data_path)
+
+    X_train, X_valid, y_train, y_valid = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
+
+    # X_train = X_train[:1000]
+    # y_train = y_train[:1000]
+    # X_valid = X_valid[:1000]
+    # y_valid = y_valid[:1000]
+
+    # MLP可以用784 做卷积需要28x28
+    X_train = np.reshape(X_train, (len(X_train), 28, 28, 1))
+    X_valid = np.reshape(X_valid, (len(X_valid), 28, 28, 1))
+
+    X_train = padding(X_train, 2)  # 对初始图像进行零填充，保证与LeNet输入结构一致60000*32*32*1
+    X_valid = padding(X_valid, 2)
+
+    optimizer = SGD(learning_rate=5)
+    model = CNN()
+    model.set_optimizer(optimizer)
+
+    history = model.train(x=X_train,
+                          y=y_train,
+                          batch_size=100,
                           epochs=1,
-                          x_valid=X_test,
-                          y_valid=y_test)
+                          x_valid=X_valid,
+                          y_valid=y_valid)
 
-    model.save(weights_path)
+    model.save(model_path)
 
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--epochs', '-e', default=5, type=int, help='epochs')
+    parser.add_argument('--learning_date', '-lr', default=0.001, type=float, help='learning_rate')
+    args = parser.parse_args(sys.argv[1:])
+
+    cnn()

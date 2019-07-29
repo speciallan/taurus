@@ -10,8 +10,27 @@ from taurus.core.saver import Saver, Loader
 
 
 def load_model(filepath):
+
     loader = Loader(filepath)
-    content = loader.load()
+    data = loader.load()
+
+    # 解析数据
+    structure = data['structure/structure']
+    weigths, biases = [], []
+
+    for k,v in data.items():
+        if k.startswith('weights/w_'):
+            weigths.append(v)
+        if k.startswith('weights/b_'):
+            biases.append(v)
+
+    # print(structure, weigths, biases)
+
+    # 加载到模型
+    model = MLP(structure)
+    model._load_weights(weigths, biases)
+
+    return model
 
 
 class MLP(models.Model):
@@ -22,13 +41,13 @@ class MLP(models.Model):
 
         self.num_layers = len(nn_structure)
         self.sizes = nn_structure
-        self.weights = [np.random.randn(n, m) for m, n in zip(nn_structure[:-1], nn_structure[1:])]
-        self.biases = [np.random.randn(n, 1) for n in nn_structure[1:]]
+        self.weights = []
+        self.biases = []
 
     def __call__(self, *args, **kwargs):
         pass
 
-    def forward(self, x):
+    def _forward(self, x):
 
         value = x
         for i in range(len(self.weights)):
@@ -36,7 +55,7 @@ class MLP(models.Model):
         y = value
         return y
 
-    def backprop(self, x, y):
+    def _backprop(self, x, y):
 
         '''计算通过单幅图像求得的每层权重和偏置的梯度'''
         delta_nabla_b = [np.zeros(b.shape) for b in self.biases]
@@ -62,9 +81,10 @@ class MLP(models.Model):
             delta = np.dot(self.weights[-l + 1].transpose(), delta) * sigmoid_prime(zs[-l])
             delta_nabla_b[-l] = delta
             delta_nabla_w[-l] = np.dot(delta, activations[-l - 1].transpose())
+
         return delta_nabla_b, delta_nabla_w
 
-    def update(self, x_batch, y_batch):
+    def _update(self, x_batch, y_batch):
 
         '''通过一个batch的数据对神经网络参数进行更新
         需要对当前batch中每张图片调用backprop函数将误差反向传播
@@ -74,12 +94,16 @@ class MLP(models.Model):
 
         # 把所有的delta误差求和
         for x, y in zip(x_batch, y_batch):
-            delta_nabla_b, delta_nabla_w = self.backprop(x, y)
+            delta_nabla_b, delta_nabla_w = self._backprop(x, y)
             nabla_b = [nb + dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
             nabla_w = [nw + dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
 
-        self.weights = [w - (self.optimizer.learning_rate / self.batch_size) * nw for w, nw in zip(self.weights, nabla_w)]
-        self.biases = [b - (self.optimizer.learning_rate / self.batch_size) * nb for b, nb in zip(self.biases, nabla_b)]
+        self.weights, self.biases = self.optimizer.optimize(self.weights, self.biases, nabla_w, nabla_b, len(x_batch))
+
+    def _init_weights(self):
+
+        self.weights = [np.random.randn(n, m) for m, n in zip(self.sizes[:-1], self.sizes[1:])]
+        self.biases = [np.random.randn(n, 1) for n in self.sizes[1:]]
 
     def train(self, x, y, batch_size, epochs, x_valid=[], y_valid=[]):
 
@@ -90,31 +114,50 @@ class MLP(models.Model):
 
         # self.optimizer.optimize(x, y, batch_size, epochs)
 
+        self._init_weights()
+
         accuracy_history = []
         loss_history = []
 
         for i in range(epochs):
+
             x_batches = [x[k:k + batch_size] for k in range(0, len(x), batch_size)]
             y_batches = [y[k:k + batch_size] for k in range(0, len(y), batch_size)]
 
             for x_batch, y_batch in zip(x_batches, y_batches):
-                self.update(x_batch, y_batch)
+                self._update(x_batch, y_batch)
 
             (x_eval, y_eval) = (x, y) if len(x_valid) == 0 or len(y_valid) == 0 else (x_valid, y_valid)
 
-            result = self.evaluate(x_eval, y_eval)
-            accuracy_history.append(result)
+            train_result = self._evaluate(x, y)
+            valid_result = self._evaluate(x_eval, y_eval)
+            accuracy_history.append(valid_result)
 
-            print("Epoch {0}: accuracy is {1}/{2}".format(i + 1, result, len(x_eval)))
+            print("Epoch {0}: train acc is {1}/{2}={3:.2f}%, valid acc is {4}/{5}={6:.2f}%".format(i + 1, train_result, len(x), train_result/len(x) * 100, valid_result, len(x_valid), valid_result / len(x_valid) * 100))
 
-        return (self.weights, self.biases), (accuracy_history, loss_history)
+        return (accuracy_history, loss_history)
 
-    def evaluate(self, x, y):
+    def inference(self, x_batch):
+
+        y_batch = np.array([])
+
+        for i in range(len(x_batch)):
+
+            y = self._forward(x_batch[i])
+            if i == 0:
+                y_batch = np.array([np.zeros(shape=(y.shape))])
+
+            y_batch = np.append(y_batch, [y], axis=0)
+
+        y_batch = np.delete(y_batch, [0], axis=0)
+
+        return y_batch
+
+    def _evaluate(self, x, y):
 
         result = 0
-
         for img, label in zip(x, y):
-            predict_label = self.forward(img)
+            predict_label = self._forward(img)
             if np.argmax(predict_label) == np.argmax(label):
                 result += 1
 
@@ -122,10 +165,16 @@ class MLP(models.Model):
 
     def save(self, filepath):
 
-        map = {'structure': self.sizes,
-               'weights': np.asarray([self.weights, self.biases])}
-        print((map['weights'][0]).shape)
-        exit()
+        weights = {}
+
+        for k,v in enumerate(self.weights):
+            weights['w_' + str(k)] = v
+
+        for k,v in enumerate(self.biases):
+            weights['b_' + str(k)] = v
+
+        map = {'structure': {'structure': self.sizes},
+               'weights': weights}
 
         saver = Saver(filepath)
         saver.save(map)
@@ -135,9 +184,13 @@ class MLP(models.Model):
     def save_weights(self, filepath):
         print('save weights to {}'.format(filepath))
 
-    def load(self, filepath):
+    def load_weights(self, filepath):
 
         map = ['structure', 'weights']
         pass
+
+    def _load_weights(self, weights, biases):
+        self.weights = weights
+        self.biases = biases
 
 

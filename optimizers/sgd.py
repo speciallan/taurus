@@ -13,6 +13,10 @@ class SGD(optimizers.Optimizer):
     def __call__(self, *args, **kwargs):
         pass
 
-    def optimize(self, x, y, batch_size, epochs):
-        pass
+    def optimize(self, weights, biases, nabla_w, nabla_b, batch_size):
+
+        weights = [w - (self.learning_rate / batch_size) * nw for w, nw in zip(weights, nabla_w)]
+        biases = [b - (self.learning_rate / batch_size) * nb for b, nb in zip(biases, nabla_b)]
+
+        return weights, biases
 

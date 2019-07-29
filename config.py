@@ -7,7 +7,8 @@ import configparser
 
 class Config():
 
-    config_filepath = './'
+    config_filepath = './config.ini'
+    data_path = './'
 
     learning_rate = 0.001
     batch_size = 32

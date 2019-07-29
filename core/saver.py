@@ -15,8 +15,9 @@ class Saver(object):
     def save(self, map):
 
         for k,v in map.items():
-            print(k, v.shape)
-            self.file.create_dataset(name=k, data=v)
+            group = self.file.create_group(name=k)
+            for k1,v1 in v.items():
+                group.create_dataset(name=k1, data=v1)
 
         return self.file
 
@@ -32,9 +33,17 @@ class Loader(object):
         self.file = h5py.File(filepath, 'r')
 
     def load(self):
-        def f(t):
-            print(t.name)
-        self.file.visit(f)
+
+        data = {}
+
+        def get_all_data(t):
+            ins = self.file[t]
+            if isinstance(ins, h5py.Dataset):
+                data[t] = ins[:]
+
+        self.file.visit(get_all_data)
+
+        return data
 
     def load_weights(self):
         pass

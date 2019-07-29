@@ -56,7 +56,7 @@ def padding(image, zero_num):
 # 加载数据集以及数据预处理
 
 def dataset_loader():
-    path = '/home/speciallan/Documents/python/data/MNIST/'
+    path = '/home/mlg1504/speciallan/python/data/MNIST/'
     train_image = read_image(path + 'train-images-idx3-ubyte')
     train_label = read_label(path + 'train-labels-idx1-ubyte')
     test_image = read_image(path + 't10k-images-idx3-ubyte')
@@ -72,6 +72,12 @@ def dataset_loader():
 
     train_image = padding(train_image, 2)  # 对初始图像进行零填充，保证与LeNet输入结构一致60000*32*32*1
     test_image = padding(test_image, 2)
+
+    train_image = train_image[:100]
+    train_label = train_label[:100]
+    test_image = test_image[:100]
+    test_label = test_label[:100]
+
 
     return train_image, train_label, test_image, test_label
 

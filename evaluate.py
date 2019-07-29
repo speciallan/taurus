@@ -18,15 +18,25 @@ def main():
 
     _, (X_test, y_test) = load_data(data_path)
 
+    X_batch = X_test[:]
+    y_batch = y_test[:]
+
     model = load_model(model_path)
 
-    x_batch = X_test[:20]
+    y_pred = model.inference(X_batch)
 
-    y_pred = model.inference(x_batch)
-    result = np.argmax(y_pred, axis=1)
-    print(result)
+    y_pred = np.argmax(y_pred, axis=1)
+    y_true = np.argmax(y_batch, axis=1)
+
+    true_num = 0
+    total = len(y_pred)
+
+    for i in range(len(y_pred)):
+        if y_pred[i] == y_true[i]:
+            true_num += 1
+
+    print('accuracy: {:.2f}%'.format(true_num / total * 100))
 
 
 if __name__ == '__main__':
     main()
-

@@ -27,7 +27,7 @@ def load_data(path):
 def read_image(path):
     with open(path, 'rb') as f:
         magic, num, rows, cols = unpack('>4I', f.read(16))
-        img = np.fromfile(f, dtype=np.uint8).reshape(num, 784, 1)  # 在这里可以调整图片读入格式
+        img = np.fromfile(f, dtype=np.uint8).reshape(num, 784, 1)
     return img
 
 
