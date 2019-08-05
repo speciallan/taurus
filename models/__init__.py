@@ -5,7 +5,7 @@
 from taurus import optimizers
 
 
-class Model():
+class BaseModel():
 
     x_batch = None
     y_batch = None

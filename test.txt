@@ -1,6 +1,0 @@
-test
-
-1、多层感知器实现，前向反向传播，训练预测，save load model，cpu实现。
-2、实现卷积、池化，训练预测，save load model。
-3、通过taurus实现布匹项目。
-4、gpu实现。

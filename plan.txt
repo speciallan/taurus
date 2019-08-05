@@ -1,0 +1,30 @@
+plan
+
+taurus
+1、多层感知器实现，前向反向传播，训练预测评估，save load model，cpu实现。
+2、实现卷积、池化，训练预测评估，save load model。
+3、实现图、动态构建、前后传播、sgd
+https://blog.csdn.net/Calcular/article/details/80976384
+https://www.bilibili.com/video/av9770302/?p=3
+4、激活函数、损失优化
+5、卷积优化、多线程
+6、通过taurus实现布匹项目。
+7、gpu实现。
+8、静态图实现
+9、模型可视化、训练监控
+
+taurus_cv
+1、faster r-cnn
+2、retinanet
+3、classification
+4、fsaf
+
+taurus_project
+1、工业检测
+2、遥感监测
+3、布匹分类
+
+taurus_board
+1、模型管理
+2、分布式
+3、远程监控训练过程

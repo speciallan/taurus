@@ -8,7 +8,34 @@ from taurus.operations.convolution import Conv2D, add_bias
 from taurus.utils.spe import spe
 
 
-class CNN(models.Model):
+class NewCNN(models.BaseModel):
+
+    def __init__(self):
+        super(NewCNN, self).__init__()
+
+    def init_weights(self):
+
+        # conv1
+        self.weights.append(np.random.randn(6, 5, 5, 1))
+        self.biases.append(np.random.rand(6, 1))
+
+        # conv2
+        self.weights.append(np.random.randn(16, 5, 5, 6))
+        self.biases.append(np.random.randn(16, 1))
+
+        # fc1
+        self.weights.append(np.random.randn(120, 400))
+        self.biases.append(np.random.randn(120, 1))
+
+        # fc2
+        self.weights.append(np.random.randn(84, 120))
+        self.biases.append(np.random.randn(84, 1))
+
+        # fc3
+        self.weights.append(np.random.randn(10, 84))
+        self.biases.append(np.random.randn(10, 1))
+
+class CNN(models.BaseModel):
 
     def __init__(self):
         super(CNN, self).__init__()

@@ -8,39 +8,14 @@ import argparse
 
 import numpy as np
 from taurus.datasets.mnist import load_data
-from taurus.models.mlp import MLP, NewMLP
+from taurus.models.mlp import MLP
 from taurus.models.cnn import CNN
-from taurus.models.model import Model
 from taurus.optimizers import SGD
-from taurus.operations import FC
 from taurus.preprocessing.generators import ImageGenerator
 from taurus.config import current_config as config
 from sklearn.model_selection import train_test_split
 from taurus.utils.spe import spe
 from taurus.operations.convolution import padding
-
-
-def new_mlp():
-
-    data_path = config.data_path + '/MNIST/'
-    model_path = './model.h5'
-
-    (X_train, y_train), _ = load_data(data_path)
-
-    X_train, X_valid, y_train, y_valid = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
-
-    model = NewMLP()
-    optimizer = SGD(learning_rate=5)
-    model.set_optimizer(optimizer)
-
-    history = model.train(x=X_train,
-                          y=y_train,
-                          batch_size=30,
-                          epochs=10,
-                          x_valid=X_valid,
-                          y_valid=y_valid)
-
-    model.save(model_path)
 
 def mlp():
 
@@ -118,5 +93,4 @@ if __name__ == '__main__':
     parser.add_argument('--learning_date', '-lr', default=0.001, type=float, help='learning_rate')
     args = parser.parse_args(sys.argv[1:])
 
-    # mlp()
-    new_mlp()
+    mlp()
