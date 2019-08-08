@@ -9,6 +9,7 @@ class Operation(object):
         pass
 
 
+from taurus.operations.input import *
 from taurus.operations.activation import *
 from taurus.operations.convolution import *
 from taurus.operations.fc import *

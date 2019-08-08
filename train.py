@@ -114,9 +114,12 @@ def cnn():
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
+    parser.add_argument('--new', '-n', default=0, type=int, help='epochs')
     parser.add_argument('--epochs', '-e', default=5, type=int, help='epochs')
     parser.add_argument('--learning_date', '-lr', default=0.001, type=float, help='learning_rate')
     args = parser.parse_args(sys.argv[1:])
 
-    # mlp()
-    new_mlp()
+    if args.new == 1:
+        new_mlp()
+    else:
+        mlp()

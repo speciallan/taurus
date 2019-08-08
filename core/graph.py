@@ -17,13 +17,12 @@ class ComputationalGraph(object):
         pass
 
 
-class Node():
+class Node(object):
 
-    in_bounding_nodes = []
-    out_bounding_nodes = []
 
     def __init__(self):
-        pass
+        self.in_bounding_nodes = []
+        self.out_bounding_nodes = []
 
     def __call__(self, inputs, *args, **kwargs):
         raise NotImplementedError

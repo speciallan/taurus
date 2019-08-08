@@ -5,7 +5,7 @@
 import numpy as np
 
 from taurus import models
-from taurus.operations import sigmoid, sigmoid_prime, FC
+from taurus.operations import sigmoid, sigmoid_prime, FC, Input
 from taurus.core.layer import Layer
 from taurus.core.saver import Saver, Loader
 from taurus.utils.spe import spe
@@ -40,6 +40,9 @@ class NewMLP(models.BaseModel):
     def __init__(self):
         super(NewMLP, self).__init__()
 
+        self.layers = []
+        self.layer_names = []
+        self.layers_avalible = []
         self.weights = []
         self.biases = []
 
@@ -53,35 +56,44 @@ class NewMLP(models.BaseModel):
         pass
 
     def _define(self):
-
-        # self.input = Input()
-        self.fc1 = FC(units=30, initializer='normal')
-        self.fc2 = FC(units=10, initializer='normal')
+        """定义网络结构"""
+        self.input = Input(shape=(784,1))
+        self.fc1 = FC(units=30, activation='sigmoid', initializer='normal')
+        self.fc2 = FC(units=10, activation='sigmoid', initializer='normal')
 
     def _build(self):
-
+        """动态构建网络"""
         layer_id = 0
         for name, layer in self.__dict__.items():
             if isinstance(layer, Layer):
 
                 # 赋值id
                 layer.id = layer_id
+                layer.name = name
                 layer_id += 1
 
-                # 合并权重
+                # 层名称
+                self.layers.append(layer)
+                self.layer_names.append(name)
+
+        # 构建计算图节点，根据前向传播网络结构初始化权重
+        self.output = self._forward(self.input)
+
+        # 权重合并
+        for name, layer in self.__dict__.items():
+            # 不合并输入输出权重
+            if isinstance(layer, Layer) and name not in ['input', 'output']:
+                # print(layer.input_shape, layer.output_shape)
+                # print(layer.weights.shape)
+                self.layers_avalible.append(layer)
                 self.weights.append(layer.weights)
                 self.biases.append(layer.biases)
-                print(layer.biases)
-
-        spe(self.biases)
 
     def _forward(self, x):
 
         x = self.fc1(x)
         x = self.fc2(x)
 
-        for i in range(len(self.weights)):
-            x = sigmoid(np.dot(self.weights[i], x) + self.biases[i])
         return x
 
     def _backprop(self, x, y):
@@ -93,21 +105,26 @@ class NewMLP(models.BaseModel):
         # 前向传播，计算各层的激活前的输出值以及激活之后的输出值，为下一步反向传播计算作准备
         activations = [x]
         zs = []
-        for b, w in zip(self.biases, self.weights):
+
+        # todo
+        for i, layer in enumerate(self.layers_avalible):
+            w, b = self.weights[i], self.biases[i]
             z = np.dot(w, activations[-1]) + b
             zs.append(z)
-            activation = sigmoid(z)
+            activation = layer.activation_func(z)
             activations.append(activation)
 
         # 先求最后一层的delta误差以及b和W的导数
+        last_layer = self.layers_avalible[-1]
         cost = activations[-1] - y
-        delta = cost * sigmoid_prime(zs[-1])
+        delta = cost * last_layer.activation_prime_func(zs[-1])
         delta_nabla_b[-1] = delta
         delta_nabla_w[-1] = np.dot(delta, activations[-2].transpose())
 
         # 将delta误差反向传播以及各层b和W的导数，一直计算到第二层
-        for l in range(2, len(self.weights) + 1):
-            delta = np.dot(self.weights[-l + 1].transpose(), delta) * sigmoid_prime(zs[-l])
+        for l in range(2, len(self.layers_avalible) + 1):
+            prime_func = self.layers_avalible[-l+1].activation_prime_func
+            delta = np.dot(self.weights[-l + 1].transpose(), delta) * prime_func(zs[-l])
             delta_nabla_b[-l] = delta
             delta_nabla_w[-l] = np.dot(delta, activations[-l - 1].transpose())
 
@@ -121,6 +138,8 @@ class NewMLP(models.BaseModel):
         # 把所有的delta误差求和
         for x, y in zip(x_batch, y_batch):
             delta_nabla_b, delta_nabla_w = self._backprop(x, y)
+
+            # 误差求和
             nabla_b = [nb + dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
             nabla_w = [nw + dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
 
@@ -150,7 +169,7 @@ class NewMLP(models.BaseModel):
             valid_result = self.evaluate(x_eval, y_eval)
             accuracy_history.append(valid_result)
 
-            print("Epoch {0}: train acc is {1}/{2}={3:.2f}%, valid acc is {4}/{5}={6:.2f}%".format(i + 1, train_result, len(x), train_result/len(x) * 100, valid_result, len(x_valid), valid_result / len(x_valid) * 100))
+            print("Epoch {0}: train_acc is {1}/{2}={3:.2f}%, val_acc is {4}/{5}={6:.2f}%".format(i + 1, train_result, len(x), train_result/len(x) * 100, valid_result, len(x_valid), valid_result / len(x_valid) * 100))
 
         return (accuracy_history, loss_history)
 
@@ -176,6 +195,38 @@ class NewMLP(models.BaseModel):
                 result += 1
 
         return result
+
+    def save(self, filepath):
+
+        weights = {}
+
+        for k,v in enumerate(self.weights):
+            weights['w_' + str(k)] = v
+
+        for k,v in enumerate(self.biases):
+            weights['b_' + str(k)] = v
+
+        map = {'structure': {'structure': self.sizes},
+               'weights': weights}
+
+        saver = Saver(filepath)
+        saver.save(map)
+
+        print('save model to {}'.format(filepath))
+
+    def save_weights(self, filepath):
+        print('save weights to {}'.format(filepath))
+
+    def load_weights(self, filepath):
+
+        map = ['structure', 'weights']
+        pass
+
+    def _load_weights(self, weights, biases):
+        self.weights = weights
+        self.biases = biases
+
+
 
 
 
