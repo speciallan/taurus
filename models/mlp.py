@@ -115,8 +115,8 @@ class NewMLP(models.BaseModel):
             activations.append(activation)
 
         # 先求最后一层的delta误差以及b和W的导数
-        last_layer = self.layers_avalible[-1]
         cost = activations[-1] - y
+        last_layer = self.layers_avalible[-1]
         delta = cost * last_layer.activation_prime_func(zs[-1])
         delta_nabla_b[-1] = delta
         delta_nabla_w[-1] = np.dot(delta, activations[-2].transpose())
@@ -138,12 +138,20 @@ class NewMLP(models.BaseModel):
         # 把所有的delta误差求和
         for x, y in zip(x_batch, y_batch):
             delta_nabla_b, delta_nabla_w = self._backprop(x, y)
+            # print(np.sum(delta_nabla_w[0][:][:]))
+            # print(np.sum(delta_nabla_b[0][:][:]))
+            # print('--------------------')
 
             # 误差求和
             nabla_b = [nb + dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
             nabla_w = [nw + dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
 
         self.weights, self.biases = self.optimizer.optimize(self.weights, self.biases, nabla_w, nabla_b, len(x_batch))
+
+        # 没有更新成功
+        # print(np.sum(nabla_w[0][:][:]))
+        # print(np.sum(nabla_b[0][:][:]))
+        # print('--------------------')
 
     def train(self, x, y, batch_size, epochs, x_valid=[], y_valid=[]):
 
@@ -296,6 +304,9 @@ class MLP(models.BaseModel):
             nabla_w = [nw + dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
 
         self.weights, self.biases = self.optimizer.optimize(self.weights, self.biases, nabla_w, nabla_b, len(x_batch))
+
+        # print(self.biases[0][:5][:5])
+        # print('--------------------')
 
     def _init_weights(self):
 
