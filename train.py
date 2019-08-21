@@ -80,7 +80,7 @@ def new_cnn(args):
 def cnn(args):
 
     data_path = config.data_path + '/MNIST/'
-    model_path = './model_cnn.h5'
+    model_path = './model_weights_cnn.h5'
 
     (X_train, y_train), _ = load_data(data_path)
 
@@ -104,20 +104,20 @@ def cnn(args):
 
     history = model.train(x=X_train,
                           y=y_train,
-                          batch_size=100,
+                          batch_size=200,
                           epochs=1,
                           x_valid=X_valid,
                           y_valid=y_valid)
 
-    model.save(model_path)
+    model.save_weights(model_path)
 
 
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--new', '-n', default=0, type=int, help='epochs')
-    parser.add_argument('--cnn', '-c', default=0, type=int, help='epochs')
+    parser.add_argument('--new', '-n', default=0, type=int, help='new')
+    parser.add_argument('--cnn', '-c', default=0, type=int, help='cnn')
     parser.add_argument('--epochs', '-e', default=10, type=int, help='epochs')
     parser.add_argument('--learning_date', '-lr', default=0.001, type=float, help='learning_rate')
     args = parser.parse_args(sys.argv[1:])

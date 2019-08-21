@@ -209,7 +209,7 @@ class BaseModel(object):
         self.epochs = epochs
 
     def save(self, filepath):
-        raise NotImplementedError
+        pass
 
     def save_weigths(self, filepath):
         pass
@@ -217,6 +217,3 @@ class BaseModel(object):
     def load_weights(self, filepath):
         pass
 
-    def _load_weights(self, weights, biases):
-        self.weights = weights
-        self.biases = biases

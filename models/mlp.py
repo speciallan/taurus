@@ -265,6 +265,10 @@ class NewMLP(models.BaseModel):
             layer.weights = self.weights[i]
             layer.biases = self.biases[i]
 
+    def _load_weights(self, weights, biases):
+        self.weights = weights
+        self.biases = biases
+
 class MLP(models.BaseModel):
 
     def __init__(self, nn_structure, **kwargs):

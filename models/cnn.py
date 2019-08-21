@@ -5,6 +5,7 @@
 from taurus import models
 from taurus.operations import *
 from taurus.operations.convolution import Conv2D, add_bias
+from taurus.core.saver import Saver, Loader
 from taurus.utils.spe import spe
 
 
@@ -256,6 +257,57 @@ class CNN(models.BaseModel):
                 result += 1
 
         return result
+
+    def save_weights(self, filepath):
+
+        weights = {}
+
+        for k,v in enumerate(self.weights):
+            weights['w_' + str(k)] = v
+
+        for k,v in enumerate(self.biases):
+            weights['b_' + str(k)] = v
+
+        for k,v in enumerate(self.filters):
+            weights['fw_' + str(k)] = v
+
+        for k,v in enumerate(self.filters_biases):
+            weights['fb_' + str(k)] = v
+
+        map = {'structure': {'structure': []},
+               'weights': weights}
+
+        saver = Saver(filepath)
+        saver.save(map)
+        print('save weights to {}'.format(filepath))
+
+    def load_weights(self, filepath):
+
+        loader = Loader(filepath)
+        data = loader.load()
+
+        # 解析数据
+        structure = data['structure/structure']
+        weigths, biases, filters, filters_biases = [], [], [], []
+
+        for k,v in data.items():
+            if k.startswith('weights/w_'):
+                weigths.append(v)
+            if k.startswith('weights/b_'):
+                biases.append(v)
+            if k.startswith('weights/fw_'):
+                filters.append(v)
+            if k.startswith('weights/fb_'):
+                filters_biases.append(v)
+
+        # 加载权重
+        self._load_weights(weigths, biases, filters, filters_biases)
+
+    def _load_weights(self, weights, biases, filters, filters_biases):
+        self.weights = weights
+        self.biases = biases
+        self.filters = filters
+        self.filters_biases = filters_biases
 
     def _define(self):
         pass
