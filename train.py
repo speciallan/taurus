@@ -20,10 +20,10 @@ from taurus.utils.spe import spe
 from taurus.operations.convolution import padding
 
 
-def new_mlp():
+def new_mlp(args):
 
     data_path = config.data_path + '/MNIST/'
-    model_path = './model.h5'
+    model_path = './model_weights.h5'
 
     (X_train, y_train), _ = load_data(data_path)
 
@@ -36,13 +36,13 @@ def new_mlp():
     history = model.train(x=X_train,
                           y=y_train,
                           batch_size=30,
-                          epochs=10,
+                          epochs=args.epochs,
                           x_valid=X_valid,
                           y_valid=y_valid)
 
-    model.save(model_path)
+    model.save_weights(model_path)
 
-def mlp():
+def mlp(args):
 
     data_path = config.data_path + '/MNIST/'
     model_path = './model.h5'
@@ -115,11 +115,11 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--new', '-n', default=0, type=int, help='epochs')
-    parser.add_argument('--epochs', '-e', default=5, type=int, help='epochs')
+    parser.add_argument('--epochs', '-e', default=10, type=int, help='epochs')
     parser.add_argument('--learning_date', '-lr', default=0.001, type=float, help='learning_rate')
     args = parser.parse_args(sys.argv[1:])
 
     if args.new == 1:
-        new_mlp()
+        new_mlp(args)
     else:
-        mlp()
+        mlp(args)
