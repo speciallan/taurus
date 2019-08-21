@@ -23,6 +23,8 @@ class BaseModel(object):
 
         self.weights = []
         self.biases = []
+        self.filters = []
+        self.filters_biases = []
 
         # nodes
         self.input = None
@@ -37,12 +39,6 @@ class BaseModel(object):
 
         elif isinstance(self.optimizer, optimizers.Optimizer):
             pass
-
-        # 定义网络
-        self._define()
-
-        # 构建图
-        self._build()
 
     def __call__(self, *args, **kwargs):
         pass

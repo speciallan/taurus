@@ -73,12 +73,14 @@ def mlp(args):
     model.save(model_path)
 
 
+def new_cnn(args):
+    pass
 
 
-def cnn():
+def cnn(args):
 
     data_path = config.data_path + '/MNIST/'
-    model_path = './model.h5'
+    model_path = './model_cnn.h5'
 
     (X_train, y_train), _ = load_data(data_path)
 
@@ -115,11 +117,18 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--new', '-n', default=0, type=int, help='epochs')
+    parser.add_argument('--cnn', '-c', default=0, type=int, help='epochs')
     parser.add_argument('--epochs', '-e', default=10, type=int, help='epochs')
     parser.add_argument('--learning_date', '-lr', default=0.001, type=float, help='learning_rate')
     args = parser.parse_args(sys.argv[1:])
 
-    if args.new == 1:
-        new_mlp(args)
+    if args.cnn == 0:
+        if args.new == 1:
+            new_mlp(args)
+        else:
+            mlp(args)
     else:
-        mlp(args)
+        if args.new == 1:
+            new_cnn(args)
+        else:
+            cnn(args)

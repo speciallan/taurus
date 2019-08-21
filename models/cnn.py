@@ -256,3 +256,6 @@ class CNN(models.BaseModel):
                 result += 1
 
         return result
+
+    def _define(self):
+        pass
