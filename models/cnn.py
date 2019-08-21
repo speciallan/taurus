@@ -36,19 +36,23 @@ class NewCNN(models.BaseModel):
         self.weights.append(np.random.randn(10, 84))
         self.biases.append(np.random.randn(10, 1))
 
+# ---------------------------------------------------------------------
+
 class CNN(models.BaseModel):
 
     def __init__(self):
         super(CNN, self).__init__()
 
         self.filters = [np.random.randn(6, 5, 5, 1)]  # 图像变成 28*28*6 池化后图像变成14*14*6
-        self.filters_biases = [np.random.randn(6, 1)]
         self.filters.append(np.random.randn(16, 5, 5, 6))  # 图像变成 10*10*16 池化后变成5*5*16
+
+        self.filters_biases = [np.random.randn(6, 1)]
         self.filters_biases.append(np.random.randn(16, 1))
 
         self.weights = [np.random.randn(120, 400)]
         self.weights.append(np.random.randn(84, 120))
         self.weights.append(np.random.randn(10, 84))
+
         self.biases = [np.random.randn(120, 1)]
         self.biases.append(np.random.randn(84, 1))
         self.biases.append(np.random.randn(10, 1))
@@ -72,13 +76,14 @@ class CNN(models.BaseModel):
 
         # 第一层卷积
         conv1 = Conv2D(self.filters[0], self.filters_biases[0])(x)
-
         relu1 = relu(conv1)
+
         pool1, pool1_max_locate = MaxPooling2D()(relu1)
 
         # 第二层卷积
         conv2 = Conv2D(self.filters[1], self.filters_biases[1])(pool1)
         relu2 = relu(conv2)
+
         pool2, pool2_max_locate = MaxPooling2D()(relu2)
 
         # 拉直
@@ -105,36 +110,39 @@ class CNN(models.BaseModel):
         '''计算通过单幅图像求得梯度'''
 
         # 先前向传播，求出各中间量
-        # 第一层卷积
-        # 第一层卷积
+        # 第一层卷积 28x28x6
         conv1 = Conv2D(self.filters[0], self.filters_biases[0])(x)
-
         relu1 = relu(conv1)
+
+        # 14x14x6
         pool1, pool1_max_locate = MaxPooling2D()(relu1)
 
-        # 第二层卷积
+        # 第二层卷积 10x10x16
         conv2 = Conv2D(self.filters[1], self.filters_biases[1])(pool1)
         relu2 = relu(conv2)
+
+        # 5x5x16
         pool2, pool2_max_locate = MaxPooling2D()(relu2)
 
-        # 拉直
+        # 拉直 400x1
         straight_input = pool2.reshape(pool2.shape[0] * pool2.shape[1] * pool2.shape[2], 1)
         # spe(straight_input.shape, self.weights[0].shape)
 
-        # 第一层全连接
+        # 第一层全连接 120x1
         full_connect1_z = np.dot(self.weights[0], straight_input) + self.biases[0]
         full_connect1_a = relu(full_connect1_z)
 
-        # 第二层全连接
+        # 第二层全连接 84x1
         full_connect2_z = np.dot(self.weights[1], full_connect1_a) + self.biases[1]
         full_connect2_a = relu(full_connect2_z)
 
-        # 第三层全连接（输出）
+        # 第三层全连接（输出） 10x1
         full_connect3_z = np.dot(self.weights[2], full_connect2_a) + self.biases[2]
         full_connect3_a = softmax(full_connect3_z)
+        # spe(full_connect1_z.shape, full_connect2_z.shape, full_connect3_z.shape)
 
         # 在这里我们使用交叉熵损失，激活函数为softmax，因此delta值就为 a-y，即对正确位置的预测值减1
-        delta_fc3 = full_connect3_a - y
+        cost = delta_fc3 = full_connect3_a - y
         delta_fc2 = np.dot(self.weights[2].transpose(), delta_fc3) * relu_prime(full_connect2_z)
         delta_fc1 = np.dot(self.weights[1].transpose(), delta_fc2) * relu_prime(full_connect1_z)
         delta_straight_input = np.dot(self.weights[0].transpose(), delta_fc1)  # 这里没有激活函数？
@@ -164,7 +172,7 @@ class CNN(models.BaseModel):
         nabla_f = [nabla_filters0, nabla_filters1]
         nabla_fb = [nabla_filters_biases0, nabla_filters_biases1]
 
-        return nabla_w, nabla_b, nabla_f, nabla_fb
+        return nabla_w, nabla_b, nabla_f, nabla_fb, cost
 
     def _update(self, x_batch, y_batch):
 
@@ -177,18 +185,22 @@ class CNN(models.BaseModel):
         nabla_f = [np.zeros(f.shape) for f in self.filters]
         nabla_fb = [np.zeros(fb.shape) for fb in self.filters_biases]
 
+        cost_all = 0
         for x, y in zip(x_batch, y_batch):
 
-            delta_nabla_w, delta_nabla_b, delta_nabla_f, delta_nabla_fb = self._backprop(x, y)
+            delta_nabla_w, delta_nabla_b, delta_nabla_f, delta_nabla_fb, cost = self._backprop(x, y)
             nabla_b = [nb + dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
             nabla_w = [nw + dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
             nabla_f = [nf + dnf for nf, dnf in zip(nabla_f, delta_nabla_f)]
             nabla_fb = [nfb + dnfb for nfb, dnfb in zip(nabla_fb, delta_nabla_fb)]
+            cost_all += sum(abs(cost))[0]
 
         self.weights = [w - (self.optimizer.learning_rate / self.batch_size) * nw for w, nw in zip(self.weights, nabla_w)]
         self.biases = [b - (self.optimizer.learning_rate / self.batch_size) * nb for b, nb in zip(self.biases, nabla_b)]
         self.filters = [f - (self.optimizer.learning_rate / self.batch_size) * nf for f, nf in zip(self.filters, nabla_f)]
         self.filters_biases = [fb - (self.optimizer.learning_rate / self.batch_size) * nfb for fb, nfb in zip(self.filters_biases, nabla_fb)]
+
+        return cost_all
 
     def _init_weights(self):
         pass
@@ -209,6 +221,7 @@ class CNN(models.BaseModel):
 
         accuracy_history = []
         loss_history = []
+        cost = 0
 
         batch_num = 0
         for j in range(epochs):
@@ -221,14 +234,14 @@ class CNN(models.BaseModel):
                 if batch_num * self.batch_size > len(x):
                     batch_num = 1
 
-                self._update(x_batch, y_batch)
+                cost = self._update(x_batch, y_batch)
 
                 # if batch_num % 100 == 0:
                 # print("after {0} training batch: accuracy is {1}/{2}".format(batch_num, self.evaluate(train_image[0:1000], train_label[0:1000]), len(train_image[0:1000])))
 
                 print("\rEpoch{0}:{1}/{2}".format(j + 1, batch_num * self.batch_size, len(x)), end=' ')
 
-            print("After epoch{0}: accuracy is {1}/{2}".format(j + 1, self._evaluate(x_valid, y_valid), len(y_valid)))
+            print("After epoch{0}: accuracy is {1}/{2}, lost is {3:.4f}".format(j + 1, self._evaluate(x_valid, y_valid), len(y_valid), cost))
 
         return (accuracy_history, loss_history)
 

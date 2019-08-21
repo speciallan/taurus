@@ -73,12 +73,6 @@ def dataset_loader():
     train_image = padding(train_image, 2)  # 对初始图像进行零填充，保证与LeNet输入结构一致60000*32*32*1
     test_image = padding(test_image, 2)
 
-    train_image = train_image[:100]
-    train_label = train_label[:100]
-    test_image = test_image[:100]
-    test_label = test_label[:100]
-
-
     return train_image, train_label, test_image, test_label
 
 
@@ -425,8 +419,15 @@ def main():
     # label维度为num×class_num×1
     train_image, train_label, test_image, test_label = dataset_loader()
 
+    # num = 1000
+    # train_image = train_image[:num]
+    # train_label = train_label[:num]
+    # test_image = test_image[:num]
+    # test_label = test_label[:num]
+
     net = ConvNet()
-    net.SGD(train_image, train_label, test_image, test_label, 30, 10, 3e-5)
+    # net.SGD(train_image, train_label, test_image, test_label, 30, 10, 3e-5)
+    net.SGD(train_image, train_label, test_image, test_label, 2, 200, 5)
 
 
 if __name__ == '__main__':

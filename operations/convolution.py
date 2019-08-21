@@ -3,6 +3,7 @@
 # Author:Speciallan
 
 import sys
+import time
 
 import numpy as np
 from taurus import operations
@@ -27,6 +28,8 @@ class Conv2D(Conv):
         self.biases = biases
 
     def __call__(self, img, *args, **kwargs):
+
+        # starttime = time.time()
 
         if len(img.shape) != 3 or len(self.conv_filter.shape) != 4:
             print("卷积运算所输入的维度不符合要求")
@@ -66,6 +69,8 @@ class Conv2D(Conv):
         # 添加偏置项
         if self.biases != None:
             img_out = add_bias(img_out, self.biases)
+
+        # print(time.time() - starttime)
 
         return img_out
 
