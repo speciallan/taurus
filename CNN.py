@@ -116,7 +116,7 @@ def conv(img, conv_filter):
 
     # 将以矩阵形式存储的卷积结果再转换为张量形式
     for i in range(filter_num):
-        img_out[:, :, i] = feature_matrix[:, i].reshape(feature_w, feature_h)
+        img_out[:, :, i] = feature_matrix[:, i].reshape(feature_h, feature_w)
 
     return img_out
 

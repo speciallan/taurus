@@ -58,7 +58,7 @@ class CNN(models.BaseModel):
     def __call__(self, inputs, *args, **kwargs):
         print(inputs)
 
-    def define(self):
+    def _define(self):
 
         inputs = np.zeros((28,28,1))
         x = MaxPooling2D()(inputs)
@@ -309,5 +309,3 @@ class CNN(models.BaseModel):
         self.filters = filters
         self.filters_biases = filters_biases
 
-    def _define(self):
-        pass
