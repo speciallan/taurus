@@ -3,6 +3,9 @@ plan
 taurus
 1、多层感知器实现，前向反向传播，训练预测评估，save load model，cpu实现。
 2、实现卷积、池化，训练预测评估，save load model。
+卷积池化效率太低了，进行优化。 im2col、池化计算方法、批处理、多线程。
+没优化一个epoch需要1h，优化后10min
+https://blog.csdn.net/Daycym/article/details/83826222
 3、实现图、动态构建、前后传播、sgd
 https://blog.csdn.net/Calcular/article/details/80976384
 https://www.bilibili.com/video/av9770302/?p=3

@@ -6,6 +6,7 @@ from taurus import models
 from taurus.operations import *
 from taurus.operations.convolution import Conv2D, add_bias
 from taurus.core.saver import Saver, Loader
+from taurus import optimizers
 from taurus.utils.spe import spe
 
 
@@ -15,6 +16,27 @@ class NewCNN(models.BaseModel):
         super(NewCNN, self).__init__()
 
     def init_weights(self):
+
+        self.batch_size = None
+        self.epochs = None
+        self.optimizer = optimizers.SGD()
+
+        self.weights = []
+        self.biases = []
+
+        # nodes
+        self.input = None
+
+        # layers
+        self.layers = []
+        self.layer_names = []
+        self.layers_avalible = []
+
+        # 定义网络
+        self._define()
+
+        # 构建图
+        self._build()
 
         # conv1
         self.weights.append(np.random.randn(6, 5, 5, 1))
@@ -36,6 +58,43 @@ class NewCNN(models.BaseModel):
         self.weights.append(np.random.randn(10, 84))
         self.biases.append(np.random.randn(10, 1))
 
+    def _build(self):
+        """动态构建网络"""
+        layer_id = 0
+        for name, layer in self.__dict__.items():
+            if isinstance(layer, Layer):
+
+                # 赋值id
+                layer.id = layer_id
+                layer.name = name
+                layer_id += 1
+
+                # 层名称
+                self.layers.append(layer)
+                self.layer_names.append(name)
+
+        # 构建计算图节点，根据前向传播网络结构初始化权重
+        self.output = self._forward(self.input)
+
+        # 权重合并
+        for name, layer in self.__dict__.items():
+            # 不合并输入输出权重
+            if isinstance(layer, Layer) and name not in ['input', 'output']:
+                # print(layer.id, layer.input_shape, layer.output_shape)
+                # print(layer.weights.shape)
+                self.layers_avalible.append(layer)
+                self.weights.append(layer.weights)
+                self.biases.append(layer.biases)
+
+    def _define(self):
+        """定义网络结构"""
+
+        self.input = Input(shape=(784,1))
+        self.conv1 = Conv2D()
+        self.fc1 = FC(units=50, activation='sigmoid', initializer='normal')
+        self.fc2 = FC(units=10, activation='sigmoid', initializer='normal')
+
+
 # ---------------------------------------------------------------------
 
 class CNN(models.BaseModel):
@@ -49,6 +108,7 @@ class CNN(models.BaseModel):
         self.filters_biases = [np.random.randn(6, 1)]
         self.filters_biases.append(np.random.randn(16, 1))
 
+        # 400 120 84 10
         self.weights = [np.random.randn(120, 400)]
         self.weights.append(np.random.randn(84, 120))
         self.weights.append(np.random.randn(10, 84))
@@ -57,72 +117,44 @@ class CNN(models.BaseModel):
         self.biases.append(np.random.randn(84, 1))
         self.biases.append(np.random.randn(10, 1))
 
-        # self.define()
+        self._define()
 
     def __call__(self, inputs, *args, **kwargs):
         print(inputs)
 
     def _define(self):
 
-        inputs = np.zeros((28,28,1))
-        x = MaxPooling2D()(inputs)
-        outputs = x
-        print(outputs.shape)
+        self.conv1 = Conv2D(filters=self.filters[0], biases=self.filters_biases[0])
 
-        return inputs, outputs
+        self.pool1 = MaxPooling2D()
 
+        self.conv2 = Conv2D(filters=self.filters[1], biases=self.filters_biases[1])
+
+        self.pool2 = MaxPooling2D()
 
     def _forward(self, x):
 
-        # 第一层卷积
-        conv1 = Conv2D(self.filters[0], self.filters_biases[0])(x)
-        relu1 = relu(conv1)
-
-        pool1, pool1_max_locate = MaxPooling2D()(relu1)
-
-        # 第二层卷积
-        conv2 = Conv2D(self.filters[1], self.filters_biases[1])(pool1)
-        relu2 = relu(conv2)
-
-        pool2, pool2_max_locate = MaxPooling2D()(relu2)
-
-        # 拉直
-        straight_input = pool2.reshape(pool2.shape[0] * pool2.shape[1] * pool2.shape[2], 1)
-
-        # 第一层全连接
-        full_connect1_z = np.dot(self.weights[0], straight_input) + self.biases[0]
-        full_connect1_a = relu(full_connect1_z)
-
-        # 第二层全连接
-        full_connect2_z = np.dot(self.weights[1], full_connect1_a) + self.biases[1]
-        full_connect2_a = relu(full_connect2_z)
-
-        # 第三层全连接（输出）
-        full_connect3_z = np.dot(self.weights[2], full_connect2_a) + self.biases[2]
-        full_connect3_a = softmax(full_connect3_z)
-
-        outputs = full_connect3_a
-
-        return outputs
-
-    def _backprop(self, x, y):
-
-        '''计算通过单幅图像求得梯度'''
-
         # 先前向传播，求出各中间量
-        # 第一层卷积 28x28x6
-        conv1 = Conv2D(self.filters[0], self.filters_biases[0])(x)
+        # 第一层卷积 28x28x6 0.003
+        conv1 = self.conv1(x)
+        # print('conv1:{}'.format(conv1.shape))
+
+        # 0.004
         relu1 = relu(conv1)
 
-        # 14x14x6
-        pool1, pool1_max_locate = MaxPooling2D()(relu1)
+        # 14x14x6 很慢 0.01 优化后 0.0001
+        pool1 = self.pool1(relu1)
+        # print('pool1:{}'.format(pool1.shape))
 
         # 第二层卷积 10x10x16
-        conv2 = Conv2D(self.filters[1], self.filters_biases[1])(pool1)
+        conv2 = self.conv2(pool1)
+        # print('conv2:{}'.format(conv2.shape))
+
         relu2 = relu(conv2)
 
         # 5x5x16
-        pool2, pool2_max_locate = MaxPooling2D()(relu2)
+        pool2 = self.pool2(relu2)
+        # print('pool2:{}'.format(pool2.shape))
 
         # 拉直 400x1
         straight_input = pool2.reshape(pool2.shape[0] * pool2.shape[1] * pool2.shape[2], 1)
@@ -139,38 +171,105 @@ class CNN(models.BaseModel):
         # 第三层全连接（输出） 10x1
         full_connect3_z = np.dot(self.weights[2], full_connect2_a) + self.biases[2]
         full_connect3_a = softmax(full_connect3_z)
+
+        outputs = full_connect3_a
+
+        return outputs
+
+    def _backprop(self, x, y):
+
+        '''计算通过单幅图像求得梯度'''
+        # time1 = time.time()
+
+        # 先前向传播，求出各中间量
+        # 第一层卷积 28x28x6 0.003
+        conv1 = self.conv1(x)
+        # print('conv1:{}'.format(conv1.shape))
+
+        # 0.004
+        relu1 = relu(conv1)
+
+        # 14x14x6 很慢 0.01 优化后 0.0001
+        pool1 = self.pool1(relu1)
+        # print('pool1:{}'.format(pool1.shape))
+
+        # 第二层卷积 10x10x16
+        conv2 = self.conv2(pool1)
+        # print('conv2:{}'.format(conv2.shape))
+
+        relu2 = relu(conv2)
+
+        # 5x5x16
+        pool2 = self.pool2(relu2)
+        # print('pool2:{}'.format(pool2.shape))
+
+        # 拉直 400x1
+        flatten = pool2.reshape(pool2.shape[0] * pool2.shape[1] * pool2.shape[2], 1)
+        # spe(straight_input.shape, self.weights[0].shape)
+
+        # todo 改fc
+        # 第一层全连接 120x1
+        full_connect1_z = np.dot(self.weights[0], flatten) + self.biases[0]
+        full_connect1_a = relu(full_connect1_z)
+
+        # 第二层全连接 84x1
+        full_connect2_z = np.dot(self.weights[1], full_connect1_a) + self.biases[1]
+        full_connect2_a = relu(full_connect2_z)
+
+        # 第三层全连接（输出） 10x1
+        full_connect3_z = np.dot(self.weights[2], full_connect2_a) + self.biases[2]
+        full_connect3_a = softmax(full_connect3_z)
         # spe(full_connect1_z.shape, full_connect2_z.shape, full_connect3_z.shape)
+
+        # print('forward:{}'.format(time.time() - time1))
+        # time1 = time.time()
 
         # 在这里我们使用交叉熵损失，激活函数为softmax，因此delta值就为 a-y，即对正确位置的预测值减1
         cost = delta_fc3 = full_connect3_a - y
+
         delta_fc2 = np.dot(self.weights[2].transpose(), delta_fc3) * relu_prime(full_connect2_z)
         delta_fc1 = np.dot(self.weights[1].transpose(), delta_fc2) * relu_prime(full_connect1_z)
-        delta_straight_input = np.dot(self.weights[0].transpose(), delta_fc1)  # 这里没有激活函数？
-        delta_pool2 = delta_straight_input.reshape(pool2.shape)
+        delta_flatten = np.dot(self.weights[0].transpose(), delta_fc1)
 
-        delta_conv2 = MaxPooling2D().backprop(delta_pool2, pool2_max_locate) * relu_prime(conv2)
+        delta_pool2 = delta_flatten.reshape(pool2.shape)
 
-        delta_pool1 = Conv2D(rot180(self.filters[1]).swapaxes(0,3))(padding(delta_conv2, self.filters[1].shape[1] - 1))
+        # pooling + relu
+        delta_conv2 = relu_prime(conv2) * self.pool2.backprop(delta_pool2)
+        # print('delta_conv2:{}'.format(delta_conv2.shape))
 
-        delta_conv1 = MaxPooling2D().backprop(delta_pool1, pool1_max_locate) * relu_prime(conv1)
+        delta_pool1 = self.conv2.backprop(delta_conv2)
+        # print('delta_pool1:{}'.format(delta_pool1.shape))
+        # delta_pool1 = Conv2D(rot180(self.filters[1]).swapaxes(0,3))(padding(delta_conv2, self.filters[1].shape[1] - 1))
+
+        delta_conv1 = relu_prime(conv1) * self.pool1.backprop(delta_pool1)
+        # print('delta_conv1:{}'.format(delta_conv1.shape))
+
 
         # 求各参数的导数
         nabla_w2 = np.dot(delta_fc3, full_connect2_a.transpose())
         nabla_b2 = delta_fc3
         nabla_w1 = np.dot(delta_fc2, full_connect1_a.transpose())
         nabla_b1 = delta_fc2
-        nabla_w0 = np.dot(delta_fc1, straight_input.transpose())
+        nabla_w0 = np.dot(delta_fc1, flatten.transpose())
         nabla_b0 = delta_fc1
 
+        # time2 = time.time()
+        # 计算filter误差 占了反向传播一半时间  x->conv1 pool1->conv2
         nabla_filters1 = conv_cal_w(delta_conv2, pool1)
         nabla_filters0 = conv_cal_w(delta_conv1, x)
         nabla_filters_biases1 = conv_cal_b(delta_conv2)
         nabla_filters_biases0 = conv_cal_b(delta_conv1)
+        # print(nabla_filters0.shape, nabla_filters1.shape)
 
+        # print('test:{}'.format(time.time() - time2))
+
+        # 合并conv和fc的权重
         nabla_w = [nabla_w0, nabla_w1, nabla_w2]
         nabla_b = [nabla_b0, nabla_b1, nabla_b2]
         nabla_f = [nabla_filters0, nabla_filters1]
         nabla_fb = [nabla_filters_biases0, nabla_filters_biases1]
+
+        # print('backprop:{}'.format(time.time() - time1))
 
         return nabla_w, nabla_b, nabla_f, nabla_fb, cost
 
@@ -179,18 +278,24 @@ class CNN(models.BaseModel):
         '''通过一个batch的数据对神经网络参数进行更新
         需要先求这个batch中每张图片的误差反向传播求得的权重梯度以及偏置梯度'''
 
-        nabla_b = [np.zeros(b.shape) for b in self.biases]
         nabla_w = [np.zeros(w.shape) for w in self.weights]
+        nabla_b = [np.zeros(b.shape) for b in self.biases]
 
         nabla_f = [np.zeros(f.shape) for f in self.filters]
         nabla_fb = [np.zeros(fb.shape) for fb in self.filters_biases]
 
         cost_all = 0
+        i = 0
         for x, y in zip(x_batch, y_batch):
 
+            # time1 = time.time()
+            # print('--------', i)
             delta_nabla_w, delta_nabla_b, delta_nabla_f, delta_nabla_fb, cost = self._backprop(x, y)
-            nabla_b = [nb + dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
+            # print('{} backprop_total:{}'.format(i, time.time() - time1))
+            i += 1
+
             nabla_w = [nw + dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
+            nabla_b = [nb + dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
             nabla_f = [nf + dnf for nf, dnf in zip(nabla_f, delta_nabla_f)]
             nabla_fb = [nfb + dnfb for nfb, dnfb in zip(nabla_fb, delta_nabla_fb)]
             cost_all += sum(abs(cost))[0]
@@ -200,13 +305,15 @@ class CNN(models.BaseModel):
         self.filters = [f - (self.optimizer.learning_rate / self.batch_size) * nf for f, nf in zip(self.filters, nabla_f)]
         self.filters_biases = [fb - (self.optimizer.learning_rate / self.batch_size) * nfb for fb, nfb in zip(self.filters_biases, nabla_fb)]
 
+        # 更新全局权重到每一层 conv fc
+        self.conv1.W = self.filters[0].transpose(0, 3, 1, 2)
+        self.conv1.b = self.filters_biases[0].transpose(1, 0)
+        self.conv2.W = self.filters[1].transpose(0, 3, 1, 2)
+        self.conv2.b = self.filters_biases[1].transpose(1, 0)
+
+        # spe(self.conv1.W.shape, self.filters[0].shape, self.conv1.b.shape, self.filters_biases[0].shape)
+
         return cost_all
-
-    def _init_weights(self):
-        pass
-
-        # self.weights = [np.random.randn(n, m) for m, n in zip(self.sizes[:-1], self.sizes[1:])]
-        # self.biases = [np.random.randn(n, 1) for n in self.sizes[1:]]
 
     def train(self, x, y, batch_size, epochs, x_valid=[], y_valid=[]):
 
@@ -216,8 +323,6 @@ class CNN(models.BaseModel):
         self.epochs = epochs
 
         # self.optimizer.optimize(x, y, batch_size, epochs)
-
-        self._init_weights()
 
         accuracy_history = []
         loss_history = []
@@ -234,14 +339,17 @@ class CNN(models.BaseModel):
                 if batch_num * self.batch_size > len(x):
                     batch_num = 1
 
+                # 12s
+                # time1 = time.time()
                 cost = self._update(x_batch, y_batch)
+                # print('update:{}'.format(time.time() - time1))
 
                 # if batch_num % 100 == 0:
                 # print("after {0} training batch: accuracy is {1}/{2}".format(batch_num, self.evaluate(train_image[0:1000], train_label[0:1000]), len(train_image[0:1000])))
 
                 print("\rEpoch{0}:{1}/{2}".format(j + 1, batch_num * self.batch_size, len(x)), end=' ')
 
-            print("After epoch{0}: accuracy is {1}/{2}, lost is {3:.4f}".format(j + 1, self._evaluate(x_valid, y_valid), len(y_valid), cost))
+            print("After epoch{0}: train_acc is {1}/{2}, val_acc is {3}/{4}, lost is {5:.4f}".format(j + 1, self._evaluate(x, y), len(y_valid), self._evaluate(x_valid, y_valid), len(y_valid), cost))
 
         return (accuracy_history, loss_history)
 

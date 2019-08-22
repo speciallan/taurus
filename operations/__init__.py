@@ -15,5 +15,6 @@ from taurus.operations.convolution import *
 from taurus.operations.fc import *
 from taurus.operations.normalization import *
 from taurus.operations.pooling import *
+from taurus.operations.common import *
 
 

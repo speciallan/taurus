@@ -9,7 +9,7 @@ import argparse
 import numpy as np
 from taurus.datasets.mnist import load_data
 from taurus.models.mlp import MLP, NewMLP
-from taurus.models.cnn import CNN
+from taurus.models.cnn import CNN, NewCNN
 from taurus.models.model import Model
 from taurus.optimizers import SGD
 from taurus.operations import FC
@@ -74,10 +74,6 @@ def mlp(args):
 
 
 def new_cnn(args):
-    pass
-
-
-def cnn(args):
 
     data_path = config.data_path + '/MNIST/'
     model_path = './model_weights_cnn.h5'
@@ -99,13 +95,48 @@ def cnn(args):
     X_valid = padding(X_valid, 2)
 
     optimizer = SGD(learning_rate=0.01)
-    model = CNN()
+    model = NewCNN()
     model.set_optimizer(optimizer)
 
     history = model.train(x=X_train,
                           y=y_train,
                           batch_size=200,
                           epochs=1,
+                          x_valid=X_valid,
+                          y_valid=y_valid)
+
+    model.save_weights(model_path)
+
+
+def cnn(args):
+
+    data_path = config.data_path + '/MNIST/'
+    model_path = './model_weights_cnn.h5'
+
+    (X_train, y_train), _ = load_data(data_path)
+
+    X_train, X_valid, y_train, y_valid = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
+
+    X_train = X_train[:1000]
+    y_train = y_train[:1000]
+    X_valid = X_valid[:1000]
+    y_valid = y_valid[:1000]
+
+    # MLP可以用784 做卷积需要28x28
+    X_train = np.reshape(X_train, (len(X_train), 28, 28, 1))
+    X_valid = np.reshape(X_valid, (len(X_valid), 28, 28, 1))
+
+    X_train = padding(X_train, 2)  # 对初始图像进行零填充，保证与LeNet输入结构一致60000*32*32*1
+    X_valid = padding(X_valid, 2)
+
+    optimizer = SGD(learning_rate=0.01)
+    model = CNN()
+    model.set_optimizer(optimizer)
+
+    history = model.train(x=X_train,
+                          y=y_train,
+                          batch_size=100,
+                          epochs=10,
                           x_valid=X_valid,
                           y_valid=y_valid)
 
