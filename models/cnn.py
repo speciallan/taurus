@@ -24,6 +24,9 @@ class NewCNN(models.BaseModel):
         self.weights = []
         self.biases = []
 
+        self.zs = []
+        self.activations = []
+
         # nodes
         self.input = None
 
@@ -37,26 +40,6 @@ class NewCNN(models.BaseModel):
 
         # 构建图
         self._build()
-
-        # conv1
-        self.weights.append(np.random.randn(6, 5, 5, 1))
-        self.biases.append(np.random.rand(6, 1))
-
-        # conv2
-        self.weights.append(np.random.randn(16, 5, 5, 6))
-        self.biases.append(np.random.randn(16, 1))
-
-        # fc1
-        self.weights.append(np.random.randn(120, 400))
-        self.biases.append(np.random.randn(120, 1))
-
-        # fc2
-        self.weights.append(np.random.randn(84, 120))
-        self.biases.append(np.random.randn(84, 1))
-
-        # fc3
-        self.weights.append(np.random.randn(10, 84))
-        self.biases.append(np.random.randn(10, 1))
 
     def _build(self):
         """动态构建网络"""
@@ -117,6 +100,9 @@ class CNN(models.BaseModel):
         self.biases.append(np.random.randn(84, 1))
         self.biases.append(np.random.randn(10, 1))
 
+        self.zs = []
+        self.activations = []
+
         self._define()
 
     def __call__(self, inputs, *args, **kwargs):
@@ -124,13 +110,16 @@ class CNN(models.BaseModel):
 
     def _define(self):
 
+        self.input = Input(shape=(32,32,1))
+        # todo
         self.conv1 = Conv2D(filters=self.filters[0], biases=self.filters_biases[0])
-
         self.pool1 = MaxPooling2D()
-
         self.conv2 = Conv2D(filters=self.filters[1], biases=self.filters_biases[1])
-
         self.pool2 = MaxPooling2D()
+        self.flatten = Flatten()
+        self.fc1 = FC(units=120, activation=None, initializer='normal')
+        self.fc2 = FC(units=84, activation=None, initializer='normal')
+        self.fc3 = FC(units=10, activation=None, initializer='normal')
 
     def _forward(self, x):
 
@@ -157,11 +146,11 @@ class CNN(models.BaseModel):
         # print('pool2:{}'.format(pool2.shape))
 
         # 拉直 400x1
-        straight_input = pool2.reshape(pool2.shape[0] * pool2.shape[1] * pool2.shape[2], 1)
+        flatten = self.flatten(pool2)
         # spe(straight_input.shape, self.weights[0].shape)
 
         # 第一层全连接 120x1
-        full_connect1_z = np.dot(self.weights[0], straight_input) + self.biases[0]
+        full_connect1_z = np.dot(self.weights[0], flatten) + self.biases[0]
         full_connect1_a = relu(full_connect1_z)
 
         # 第二层全连接 84x1
@@ -176,6 +165,7 @@ class CNN(models.BaseModel):
 
         return outputs
 
+    # todo
     def _backprop(self, x, y):
 
         '''计算通过单幅图像求得梯度'''
@@ -204,31 +194,26 @@ class CNN(models.BaseModel):
         # print('pool2:{}'.format(pool2.shape))
 
         # 拉直 400x1
-        flatten = pool2.reshape(pool2.shape[0] * pool2.shape[1] * pool2.shape[2], 1)
-        # spe(straight_input.shape, self.weights[0].shape)
+        flatten = self.flatten(pool2)
 
-        # todo 改fc
         # 第一层全连接 120x1
-        full_connect1_z = np.dot(self.weights[0], flatten) + self.biases[0]
-        full_connect1_a = relu(full_connect1_z)
+        fc1_z = self.fc1(flatten)
+        fc1_a = relu(fc1_z)
 
-        # 第二层全连接 84x1
-        full_connect2_z = np.dot(self.weights[1], full_connect1_a) + self.biases[1]
-        full_connect2_a = relu(full_connect2_z)
+        fc2_z = self.fc2(fc1_a)
+        fc2_a = relu(fc2_z)
 
-        # 第三层全连接（输出） 10x1
-        full_connect3_z = np.dot(self.weights[2], full_connect2_a) + self.biases[2]
-        full_connect3_a = softmax(full_connect3_z)
-        # spe(full_connect1_z.shape, full_connect2_z.shape, full_connect3_z.shape)
+        fc3_z = self.fc3(fc2_a)
+        fc3_a = softmax(fc3_z)
 
         # print('forward:{}'.format(time.time() - time1))
         # time1 = time.time()
 
         # 在这里我们使用交叉熵损失，激活函数为softmax，因此delta值就为 a-y，即对正确位置的预测值减1
-        cost = delta_fc3 = full_connect3_a - y
+        cost = delta_fc3 = fc3_a - y
 
-        delta_fc2 = np.dot(self.weights[2].transpose(), delta_fc3) * relu_prime(full_connect2_z)
-        delta_fc1 = np.dot(self.weights[1].transpose(), delta_fc2) * relu_prime(full_connect1_z)
+        delta_fc2 = np.dot(self.weights[2].transpose(), delta_fc3) * relu_prime(fc2_z)
+        delta_fc1 = np.dot(self.weights[1].transpose(), delta_fc2) * relu_prime(fc1_z)
         delta_flatten = np.dot(self.weights[0].transpose(), delta_fc1)
 
         delta_pool2 = delta_flatten.reshape(pool2.shape)
@@ -246,9 +231,9 @@ class CNN(models.BaseModel):
 
 
         # 求各参数的导数
-        nabla_w2 = np.dot(delta_fc3, full_connect2_a.transpose())
+        nabla_w2 = np.dot(delta_fc3, fc2_a.transpose())
         nabla_b2 = delta_fc3
-        nabla_w1 = np.dot(delta_fc2, full_connect1_a.transpose())
+        nabla_w1 = np.dot(delta_fc2, fc1_a.transpose())
         nabla_b1 = delta_fc2
         nabla_w0 = np.dot(delta_fc1, flatten.transpose())
         nabla_b0 = delta_fc1
@@ -425,6 +410,7 @@ class CNN(models.BaseModel):
         self._load_weights(weigths, biases, filters, filters_biases)
 
     def _load_weights(self, weights, biases, filters, filters_biases):
+
         self.weights = weights
         self.biases = biases
         self.filters = filters

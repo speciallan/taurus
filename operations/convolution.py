@@ -8,10 +8,11 @@ import time
 import numpy as np
 from taurus import operations
 from taurus.operations.common import im2col, col2im
+from taurus.core.layer import Layer
 from taurus.utils.spe import spe
 
 
-class Conv(operations.Operation):
+class Conv(Layer):
 
     def __init__(self):
         super(Conv, self).__init__()

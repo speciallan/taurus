@@ -4,13 +4,13 @@
 
 import numpy as np
 from taurus.core.layer import Layer
-from taurus.operations import sigmoid, sigmoid_prime
+from taurus.operations import sigmoid, sigmoid_prime, relu, relu_prime
 from taurus.utils.spe import spe
 
 
 class FC(Layer):
 
-    def __init__(self, units, activation = 'sigmoid', initializer='normal'):
+    def __init__(self, units, activation=None, initializer='normal'):
 
         super(FC, self).__init__()
 
@@ -54,14 +54,20 @@ class FC(Layer):
             self.has_inited = True
 
         # 激活函数
-        if self.activation == 'sigmoid':
-            self.activation_func = sigmoid
-            self.activation_prime_func = sigmoid_prime
-        else:
-            self.activation_func = sigmoid
-            self.activation_prime_func = sigmoid_prime
+        self.outputs = np.dot(self.weights, x) + self.biases
 
-        self.outputs = self.activation_func(np.dot(self.weights, x) + self.biases)
+        if self.activation is not None:
+
+            if self.activation == 'sigmoid':
+                self.activation_func = sigmoid
+                self.activation_prime_func = sigmoid_prime
+
+            elif self.activation == 'relu':
+                self.activation_func = relu
+                self.activation_prime_func = relu_prime
+
+            self.outputs = self.activation_func(self.outputs)
+
         self.output_shape = self.outputs.shape
 
         # print(self.id, self.name, 'in_nodes:', self.in_bounding_nodes, 'out_nodes:', self.out_bounding_nodes)

@@ -3,6 +3,23 @@
 # Author:Speciallan
 
 import numpy as np
+from taurus import operations
+from taurus.core.layer import Layer
+
+
+class Flatten(Layer):
+
+    def __init__(self):
+        super(Flatten, self).__init__()
+
+    def __call__(self, inputs, *args, **kwargs):
+
+        x = inputs
+
+        flatten = x.reshape(x.shape[0] * x.shape[1] * x.shape[2], 1)
+
+        return flatten
+
 
 
 def im2col(input_data, filter_h, filter_w, stride=1, pad=0):
