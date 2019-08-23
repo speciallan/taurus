@@ -7,6 +7,7 @@ from taurus.operations import *
 from taurus.operations.convolution import Conv2D, add_bias
 from taurus.core.saver import Saver, Loader
 from taurus import optimizers
+from taurus import losses
 from taurus.utils.spe import spe
 
 
@@ -91,15 +92,6 @@ class CNN(models.BaseModel):
         self.filters_biases = [np.random.randn(6, 1)]
         self.filters_biases.append(np.random.randn(16, 1))
 
-        # 400 120 84 10
-        self.weights = [np.random.randn(120, 400)]
-        self.weights.append(np.random.randn(84, 120))
-        self.weights.append(np.random.randn(10, 84))
-
-        self.biases = [np.random.randn(120, 1)]
-        self.biases.append(np.random.randn(84, 1))
-        self.biases.append(np.random.randn(10, 1))
-
         self.zs = []
         self.activations = []
 
@@ -150,18 +142,18 @@ class CNN(models.BaseModel):
         # spe(straight_input.shape, self.weights[0].shape)
 
         # 第一层全连接 120x1
-        full_connect1_z = np.dot(self.weights[0], flatten) + self.biases[0]
-        full_connect1_a = relu(full_connect1_z)
+        fc1_z = self.fc1(flatten)
+        fc1_a = relu(fc1_z)
 
         # 第二层全连接 84x1
-        full_connect2_z = np.dot(self.weights[1], full_connect1_a) + self.biases[1]
-        full_connect2_a = relu(full_connect2_z)
+        fc2_z = self.fc2(fc1_a)
+        fc2_a = relu(fc2_z)
 
         # 第三层全连接（输出） 10x1
-        full_connect3_z = np.dot(self.weights[2], full_connect2_a) + self.biases[2]
-        full_connect3_a = softmax(full_connect3_z)
+        fc3_z = self.fc3(fc2_a)
+        fc3_a = softmax(fc3_z)
 
-        outputs = full_connect3_a
+        outputs = fc3_a
 
         return outputs
 
@@ -195,6 +187,7 @@ class CNN(models.BaseModel):
 
         # 拉直 400x1
         flatten = self.flatten(pool2)
+        # print(pool2)
 
         # 第一层全连接 120x1
         fc1_z = self.fc1(flatten)
@@ -211,6 +204,10 @@ class CNN(models.BaseModel):
 
         # 在这里我们使用交叉熵损失，激活函数为softmax，因此delta值就为 a-y，即对正确位置的预测值减1
         cost = delta_fc3 = fc3_a - y
+        # print(cost.shape)
+        # print(fc3_a, y)
+        cost = delta_fc3 = losses.CrossEntropy.fn(fc3_a, y)
+        spe(cost.shape)
 
         delta_fc2 = np.dot(self.weights[2].transpose(), delta_fc3) * relu_prime(fc2_z)
         delta_fc1 = np.dot(self.weights[1].transpose(), delta_fc2) * relu_prime(fc1_z)
@@ -295,6 +292,13 @@ class CNN(models.BaseModel):
         self.conv1.b = self.filters_biases[0].transpose(1, 0)
         self.conv2.W = self.filters[1].transpose(0, 3, 1, 2)
         self.conv2.b = self.filters_biases[1].transpose(1, 0)
+
+        self.fc1.weights = self.weights[0]
+        self.fc1.biases = self.biases[0]
+        self.fc2.weights = self.weights[1]
+        self.fc2.biases = self.biases[1]
+        self.fc3.weights = self.weights[2]
+        self.fc3.biases = self.biases[2]
 
         # spe(self.conv1.W.shape, self.filters[0].shape, self.conv1.b.shape, self.filters_biases[0].shape)
 

@@ -57,7 +57,7 @@ def relu(feature, version=0):
     # time1 = time.time()
 
     if version == 0:
-        relu_out =  np.where(feature <= 0, 0, feature)
+        relu_out = np.where(feature <= 0, 0, feature)
     else:
         relu_out = np.zeros(feature.shape)
 
@@ -101,12 +101,61 @@ def relu_prime(feature, version=0):  # 对relu函数的求导
 
     return relu_prime_out
 
+def softmax(x):
+    """Compute the softmax in a numerically stable way."""
+    x = x - np.max(x)
+    exp_x = np.exp(x)
+    softmax_x = exp_x / np.sum(exp_x)
+    return softmax_x
 
-def softmax(z):
+def softmax_matrix(x):
+    """
+    Compute the softmax function for each row of the input x.
 
-    tmp = np.max(z)
-    z -= tmp  # 用于缩放每行的元素，避免溢出，有效
-    z = np.exp(z)
-    tmp = np.sum(z)
-    z /= tmp
-    return z
+    Arguments:
+    x -- A N dimensional vector or M x N dimensional numpy matrix.
+
+    Return:
+    x -- You are allowed to modify x in-place
+    """
+    orig_shape = x.shape
+
+    if len(x.shape) > 1:
+        # Matrix
+        exp_minmax = lambda x: np.exp(x - np.max(x))
+        denom = lambda x: 1.0 / np.sum(x)
+        x = np.apply_along_axis(exp_minmax, 1, x)
+        denominator = np.apply_along_axis(denom, 1, x)
+
+        if len(denominator.shape) == 1:
+            denominator = denominator.reshape((denominator.shape[0], 1))
+
+        x = x * denominator
+    else:
+        # Vector
+        x_max = np.max(x)
+        x = x - x_max
+        numerator = np.exp(x)
+        denominator = 1.0 / np.sum(numerator)
+        x = numerator.dot(denominator)
+
+    assert x.shape == orig_shape
+    return x
+
+
+# https://blog.csdn.net/weixin_37251044/article/details/81206236
+class SoftmaxLayer:
+    def __init__(self, name='Softmax'):
+        pass
+
+    def forward(self, in_data):
+        shift_scores = in_data - np.max(in_data, axis=1).reshape(-1, 1)                    #在每行中10个数都减去该行中最大的数字
+        self.top_val = np.exp(shift_scores) / np.sum(np.exp(shift_scores), axis=1).reshape(-1, 1)
+        return self.top_val
+
+    def backward(self, residual):
+        N = residual.shape[0]
+        dscores = self.top_val.copy()
+        dscores[range(N), list(residual)] -= 1                                           #loss对softmax层的求导
+        dscores /= N
+        return dscores

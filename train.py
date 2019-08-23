@@ -94,7 +94,7 @@ def new_cnn(args):
     X_train = padding(X_train, 2)  # 对初始图像进行零填充，保证与LeNet输入结构一致60000*32*32*1
     X_valid = padding(X_valid, 2)
 
-    optimizer = SGD(learning_rate=0.01)
+    optimizer = SGD(learning_rate=0.001)
     model = NewCNN()
     model.set_optimizer(optimizer)
 
