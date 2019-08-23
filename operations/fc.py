@@ -4,11 +4,12 @@
 
 import numpy as np
 from taurus.core.layer import Layer
+from taurus import operations
 from taurus.operations import sigmoid, sigmoid_prime, relu, relu_prime
 from taurus.utils.spe import spe
 
 
-class FC(Layer):
+class FC(operations.Operation):
 
     def __init__(self, units, activation=None, initializer='normal'):
 
@@ -54,7 +55,7 @@ class FC(Layer):
             self.has_inited = True
 
         # 激活函数
-        self.outputs = np.dot(self.weights, x) + self.biases
+        self.outputs = self._forward_cpu(x)
 
         if self.activation is not None:
 
@@ -80,6 +81,18 @@ class FC(Layer):
             return self
         else:
             return self.outputs
+
+    def backprop(self, delta):
+        delta = self._backprop_cpu(delta)
+        return delta
+
+    def _forward_cpu(self, x):
+        x = np.dot(self.weights, x) + self.biases
+        return x
+
+    def _backprop_cpu(self, delta):
+        delta = np.dot(self.weights.transpose(), delta)
+        return delta
 
     def _init_weights(self):
 

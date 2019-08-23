@@ -3,10 +3,10 @@
 # Author:Speciallan
 
 import numpy as np
-from taurus.core.layer import Layer
+from taurus import operations
 
 
-class Input(Layer):
+class Input(operations.Operation):
 
     def __init__(self, shape):
 

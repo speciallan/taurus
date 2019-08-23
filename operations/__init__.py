@@ -2,11 +2,13 @@
 # -*- coding:utf-8 -*-
 # Author:Speciallan
 
+from taurus.core.layer import Layer
 
-class Operation(object):
 
-    def __init__(self):
-        pass
+class Operation(Layer):
+
+    def __init__(self, name=''):
+        super(Operation, self).__init__()
 
 
 from taurus.operations.input import *

@@ -6,6 +6,7 @@ import numpy as np
 import time
 from taurus import operations
 from taurus.operations.common import im2col, col2im
+from taurus.core.layer import Layer
 from taurus.utils.spe import spe
 
 
@@ -17,7 +18,7 @@ class Pooling(operations.Operation):
     def forward_cpu(self, feature):
         pass
 
-    def backprop_cpu(self, pool_out_delta):
+    def backprop_cpu(self, delta):
         pass
 
     def forward_gpu(self):

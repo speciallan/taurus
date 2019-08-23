@@ -4,10 +4,9 @@
 
 import numpy as np
 from taurus import operations
-from taurus.core.layer import Layer
 
 
-class Flatten(Layer):
+class Flatten(operations.Operation):
 
     def __init__(self):
         super(Flatten, self).__init__()

@@ -56,7 +56,7 @@ def padding(image, zero_num):
 # 加载数据集以及数据预处理
 
 def dataset_loader():
-    path = '/home/mlg1504/speciallan/python/data/MNIST/'
+    path = '/home/speciallan/Documents/python/data/MNIST/'
     train_image = read_image(path + 'train-images-idx3-ubyte')
     train_label = read_label(path + 'train-labels-idx1-ubyte')
     test_image = read_image(path + 't10k-images-idx3-ubyte')
@@ -419,15 +419,15 @@ def main():
     # label维度为num×class_num×1
     train_image, train_label, test_image, test_label = dataset_loader()
 
-    # num = 1000
-    # train_image = train_image[:num]
-    # train_label = train_label[:num]
-    # test_image = test_image[:num]
-    # test_label = test_label[:num]
+    num = 1000
+    train_image = train_image[:num]
+    train_label = train_label[:num]
+    test_image = test_image[:num]
+    test_label = test_label[:num]
 
     net = ConvNet()
-    # net.SGD(train_image, train_label, test_image, test_label, 30, 10, 3e-5)
-    net.SGD(train_image, train_label, test_image, test_label, 2, 200, 5)
+    net.SGD(train_image, train_label, test_image, test_label, 5, 100, 3e-5)
+    # net.SGD(train_image, train_label, test_image, test_label, 2, 200, 5)
 
 
 if __name__ == '__main__':

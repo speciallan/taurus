@@ -12,7 +12,7 @@ from taurus.core.layer import Layer
 from taurus.utils.spe import spe
 
 
-class Conv(Layer):
+class Conv(operations.Operation):
 
     def __init__(self):
         super(Conv, self).__init__()
@@ -20,19 +20,22 @@ class Conv(Layer):
 
 class Conv2D(Conv):
 
-    def __init__(self, filters, stride=1, padding='valid', biases=None, pad=0):
+    def __init__(self, filters, kernel_size=3, stride=1, padding='valid', biases=None, pad=0, activation=None, initializer='normal'):
         super(Conv2D, self).__init__()
 
-        # self.filters = filters
-        # self.kernel_size = kernel_size
+        self.type = self.CONV
+
         self.filters = filters
+        self.kernel_size = kernel_size
         self.stride = stride
         self.padding = padding
-        self.biases = biases
 
-        self.W = filters
-        self.b = biases
+        self.weights = None
+        self.biases = None
         self.pad = pad
+
+        self.activation = activation
+        self.initializer = initializer
 
         # 中间数据（backward时使用）
         self.x = None
@@ -43,17 +46,46 @@ class Conv2D(Conv):
         self.dW = None
         self.db = None
 
-        # 转换shape
-        self.W = self.W.transpose(0, 3, 1, 2)
-        self.b = self.b.transpose(1, 0)
+        self.activation_func = None
+        self.activation_prime_func = None
+
+        self.has_inited = False
 
     def __call__(self, inputs, *args, **kwargs):
 
-        feature = inputs
+        if isinstance(inputs, Layer):
+            x = super(Conv2D, self).__call__(inputs)
+        else:
+            x = inputs
 
-        out = self._forward_cpu1(feature)
+        # 初始化权重
+        if not self.has_inited:
+
+            h, w, c = x.shape
+            self.in_channel = c
+            self.out_channel = self.filters
+
+            self.weights = np.zeros(shape=(self.out_channel, self.kernel_size, self.kernel_size, self.in_channel))
+            self.biases = np.zeros(shape=(self.out_channel, 1))
+
+            # 初始化
+            self._init_weights()
+            self.has_inited = True
+
+        out = self._forward_cpu1(x)
 
         return out
+
+    def _init_weights(self):
+
+        if self.initializer == 'normal':
+            self.weights = np.random.randn(self.out_channel, self.kernel_size, self.kernel_size, self.in_channel)
+            self.biases = np.random.randn(self.out_channel, 1)
+
+        # 转换shape
+        self.weights = self.weights.transpose(0, 3, 1, 2)
+        self.biases = self.biases.transpose(1, 0)
+
 
     def backprop(self, delta):
 
@@ -64,35 +96,35 @@ class Conv2D(Conv):
 
     def _forward_cpu1(self, x):
 
-        # print('w', self.W.shape, 'b', self.b.shape)
+        # print('w', self.weights.shape, 'b', self.biases.shape)
 
         x = np.expand_dims(x, axis=0)
         x = x.transpose(0, 3, 1, 2)
 
         # (1,1,32,32) (6,1,5,5)
-        # spe(x.shape, self.W.shape)
+        # spe(x.shape, self.weights.shape)
 
         # 卷积核大小
-        FN, C, FH, FW = self.W.shape
+        FN, C, FH, FW = self.weights.shape
 
         # 数据数据大小
         N, C, H, W = x.shape
-        # print(x.shape, self.W.shape)
+        # print(x.shape, self.weights.shape)
 
         # 计算输出数据大小
         out_h = 1 + int((H + 2 * self.pad - FH) / self.stride)
         out_w = 1 + int((W + 2 * self.pad - FW) / self.stride)
 
         # 利用im2col转换为行
-        # print(x.shape, self.W.shape)
+        # print(x.shape, self.weights.shape)
         col = im2col(x, FH, FW, self.stride, self.pad)
 
         # 卷积核转换为列，展开为2维数组
-        col_W = self.W.reshape(FN, -1).T
+        col_W = self.weights.reshape(FN, -1).T
 
         # 计算正向传播
-        # print(col.shape, col_W.shape, self.b.shape)
-        out = np.dot(col, col_W) + self.b
+        # print(col.shape, col_W.shape, self.biases.shape)
+        out = np.dot(col, col_W) + self.biases
         # print(out.shape)
         out = out.reshape(N, out_h, out_w, -1).transpose(0, 3, 1, 2)
         # print(out.shape)
@@ -112,7 +144,7 @@ class Conv2D(Conv):
         dout = dout.transpose(0, 3, 1, 2)
 
         # 卷积核大小
-        FN, C, FH, FW = self.W.shape
+        FN, C, FH, FW = self.weights.shape
         # dout = dout.transpose(0, 2, 3, 1).reshape(-1, FN)
         dout = dout.reshape(-1, FN)
 

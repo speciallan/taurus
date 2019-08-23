@@ -5,6 +5,7 @@
 import numpy as np
 import time
 from taurus import operations
+from taurus.utils.spe import spe
 
 
 def sigmoid(z):
@@ -101,7 +102,16 @@ def relu_prime(feature, version=0):  # 对relu函数的求导
 
     return relu_prime_out
 
-def softmax(x):
+def softmax(z):
+    tmp = np.max(z)
+    z -= tmp  # 用于缩放每行的元素，避免溢出，有效
+    z = np.exp(z)
+    tmp = np.sum(z)
+    z /= tmp
+    return z
+
+
+def softmax1(x):
     """Compute the softmax in a numerically stable way."""
     x = x - np.max(x)
     exp_x = np.exp(x)
@@ -144,18 +154,35 @@ def softmax_matrix(x):
 
 
 # https://blog.csdn.net/weixin_37251044/article/details/81206236
-class SoftmaxLayer:
-    def __init__(self, name='Softmax'):
-        pass
+class Softmax(operations.Operation):
 
-    def forward(self, in_data):
-        shift_scores = in_data - np.max(in_data, axis=1).reshape(-1, 1)                    #在每行中10个数都减去该行中最大的数字
+    def __init__(self, *args, **kargs):
+        super(Softmax, self).__init__(*args, **kargs)
+
+    def __call__(self, inputs, *args, **kwargs):
+        return self._forward_cpu(inputs)
+
+    def backprop(self, delta):
+        return self._backprop_cpu(delta)
+
+    def _forward_cpu(self, in_data):
+        # return np.exp(x) / np.sum(np.exp(x))
+
+        shift_scores = in_data - np.max(in_data, axis=1).reshape(-1, 1)
+
+        #在每行中10个数都减去该行中最大的数字
         self.top_val = np.exp(shift_scores) / np.sum(np.exp(shift_scores), axis=1).reshape(-1, 1)
+
         return self.top_val
 
-    def backward(self, residual):
+    def _backprop_cpu(self, residual):
+
         N = residual.shape[0]
         dscores = self.top_val.copy()
-        dscores[range(N), list(residual)] -= 1                                           #loss对softmax层的求导
+        # dscores[range(N), list(residual)] -= 1
+        dscores -= 1
+
+        #loss对softmax层的求导
         dscores /= N
+
         return dscores
