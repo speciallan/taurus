@@ -22,6 +22,7 @@ class Activation(operations.Operation):
 
     def __init__(self):
         super(Activation, self).__init__()
+        self.type = self.ACTIVATION
 
     def __call__(self, inputs, *args, **kwargs):
         pass
@@ -31,6 +32,7 @@ class Sigmoid(operations.Operation):
 
     def __init__(self):
         super(Sigmoid, self).__init__()
+        self.type = self.ACTIVATION
 
     def __call__(self, inputs, *args, **kwargs):
 
@@ -43,10 +45,16 @@ class Relu(Activation):
 
     def __init__(self):
         super(Relu, self).__init__()
+        self.x = np.array([])
 
-    def __call__(self, feature, *args, **kwargs):
-        pass
+    def __call__(self, x, *args, **kwargs):
+        self.x = x
+        out = relu(x)
+        return out
 
+    def backprop(self):
+        out = relu_prime(self.x)
+        return out
 
 def relu(feature, version=0):
     '''Relu激活函数，有两种情况会使用到
@@ -111,62 +119,27 @@ def softmax(z):
     return z
 
 
-def softmax1(x):
-    """Compute the softmax in a numerically stable way."""
-    x = x - np.max(x)
-    exp_x = np.exp(x)
-    softmax_x = exp_x / np.sum(exp_x)
-    return softmax_x
-
-def softmax_matrix(x):
-    """
-    Compute the softmax function for each row of the input x.
-
-    Arguments:
-    x -- A N dimensional vector or M x N dimensional numpy matrix.
-
-    Return:
-    x -- You are allowed to modify x in-place
-    """
-    orig_shape = x.shape
-
-    if len(x.shape) > 1:
-        # Matrix
-        exp_minmax = lambda x: np.exp(x - np.max(x))
-        denom = lambda x: 1.0 / np.sum(x)
-        x = np.apply_along_axis(exp_minmax, 1, x)
-        denominator = np.apply_along_axis(denom, 1, x)
-
-        if len(denominator.shape) == 1:
-            denominator = denominator.reshape((denominator.shape[0], 1))
-
-        x = x * denominator
-    else:
-        # Vector
-        x_max = np.max(x)
-        x = x - x_max
-        numerator = np.exp(x)
-        denominator = 1.0 / np.sum(numerator)
-        x = numerator.dot(denominator)
-
-    assert x.shape == orig_shape
-    return x
-
-
 # https://blog.csdn.net/weixin_37251044/article/details/81206236
-class Softmax(operations.Operation):
+class Softmax(Activation):
 
     def __init__(self, *args, **kargs):
-        super(Softmax, self).__init__(*args, **kargs)
+        super(Softmax, self).__init__()
 
     def __call__(self, inputs, *args, **kwargs):
         return self._forward_cpu(inputs)
 
-    def backprop(self, delta):
-        return self._backprop_cpu(delta)
+    def backprop(self):
+        return self._backprop_cpu()
 
-    def _forward_cpu(self, in_data):
-        # return np.exp(x) / np.sum(np.exp(x))
+    def _forward_cpu(self, z):
+
+        tmp = np.max(z)
+        z -= tmp  # 用于缩放每行的元素，避免溢出，有效
+        z = np.exp(z)
+        tmp = np.sum(z)
+        z /= tmp
+
+        return z
 
         shift_scores = in_data - np.max(in_data, axis=1).reshape(-1, 1)
 
@@ -175,14 +148,17 @@ class Softmax(operations.Operation):
 
         return self.top_val
 
-    def _backprop_cpu(self, residual):
+    def _backprop_cpu(self):
 
-        N = residual.shape[0]
-        dscores = self.top_val.copy()
-        # dscores[range(N), list(residual)] -= 1
-        dscores -= 1
+        """softmax反向传播直接返回"""
+        return 1
 
-        #loss对softmax层的求导
-        dscores /= N
+        # N = residual.shape[0]
+        # dscores = self.top_val.copy()
+        # # dscores[range(N), list(residual)] -= 1
+        # dscores -= 1
+        #
+        # #loss对softmax层的求导
+        # dscores /= N
 
-        return dscores
+        return residual

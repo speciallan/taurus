@@ -14,6 +14,7 @@ class Pooling(operations.Operation):
 
     def __init__(self):
         super(Pooling, self).__init__()
+        self.type = self.POOLING
 
     def forward_cpu(self, feature):
         pass

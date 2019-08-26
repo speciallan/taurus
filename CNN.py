@@ -406,6 +406,7 @@ class ConvNet(object):
         nabla_filters0 = conv_cal_w(delta_conv1, x)
         nabla_filters_biases1 = conv_cal_b(delta_conv2)
         nabla_filters_biases0 = conv_cal_b(delta_conv1)
+        # print(x.shape, delta_conv1.shape, nabla_filters0.shape)
 
         nabla_w = [nabla_w0, nabla_w1, nabla_w2]
         nabla_b = [nabla_b0, nabla_b1, nabla_b2]

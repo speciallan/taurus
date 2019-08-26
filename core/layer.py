@@ -11,8 +11,10 @@ class Layer(Node):
 
     INPUT = 'input'
     FC = 'fc'
+    ACTIVATION = 'activation'
     CONV = 'conv'
     POOLING = 'pooling'
+    FLATTEN = 'flatten'
 
     def __init__(self):
         super(Layer, self).__init__()

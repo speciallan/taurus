@@ -24,6 +24,10 @@ class FC(operations.Operation):
         self.activation = activation
         self.initializer = initializer
 
+        # 记录前向反向传播的输入
+        self.input = None
+        self.delta = None
+
         self.activation_func = None
         self.activation_prime_func = None
 
@@ -54,6 +58,9 @@ class FC(operations.Operation):
             self._init_weights()
             self.has_inited = True
 
+        # 记录输入
+        self.input = x
+
         # 激活函数
         self.outputs = self._forward_cpu(x)
 
@@ -83,8 +90,16 @@ class FC(operations.Operation):
             return self.outputs
 
     def backprop(self, delta):
+
+        # 记录梯度 反向传播输入
+        self.delta = delta
         delta = self._backprop_cpu(delta)
         return delta
+
+    def cul_prime(self):
+        nabla_w = np.dot(self.delta, self.input.transpose())
+        nabla_b = self.delta
+        return nabla_w, nabla_b
 
     def _forward_cpu(self, x):
         x = np.dot(self.weights, x) + self.biases

@@ -166,9 +166,7 @@ class NewMLP(models.BaseModel):
         self.weights, self.biases = self.optimizer.optimize(self.weights, self.biases, nabla_w, nabla_b, len(x_batch))
 
         # 更新权重到每一个节点
-        for i, layer in enumerate(self.layers_avalible):
-            layer.weights = self.weights[i]
-            layer.biases = self.biases[i]
+        self._update_weights_to_avaliable_layers()
 
         return cost_all
 
@@ -261,13 +259,18 @@ class NewMLP(models.BaseModel):
         self._load_weights(weigths, biases)
 
         # 更新权重到每一个节点
-        for i, layer in enumerate(self.layers_avalible):
-            layer.weights = self.weights[i]
-            layer.biases = self.biases[i]
+        self._update_weights_to_avaliable_layers()
 
     def _load_weights(self, weights, biases):
         self.weights = weights
         self.biases = biases
+
+    def _update_weights_to_avaliable_layers(self):
+
+        # 更新权重到每一个节点
+        for i, layer in enumerate(self.layers_avalible):
+            layer.weights = self.weights[i]
+            layer.biases = self.biases[i]
 
 class MLP(models.BaseModel):
 

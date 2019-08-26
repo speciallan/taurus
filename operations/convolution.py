@@ -16,6 +16,7 @@ class Conv(operations.Operation):
 
     def __init__(self):
         super(Conv, self).__init__()
+        self.type = self.CONV
 
 
 class Conv2D(Conv):
@@ -46,6 +47,9 @@ class Conv2D(Conv):
         self.dW = None
         self.db = None
 
+        self.input = None
+        self.delta = None
+
         self.activation_func = None
         self.activation_prime_func = None
 
@@ -72,6 +76,7 @@ class Conv2D(Conv):
             self._init_weights()
             self.has_inited = True
 
+        self.input = x
         out = self._forward_cpu1(x)
 
         return out
@@ -86,13 +91,21 @@ class Conv2D(Conv):
         self.weights = self.weights.transpose(0, 3, 1, 2)
         self.biases = self.biases.transpose(1, 0)
 
-
     def backprop(self, delta):
+
+        # 保存反向传播的输出
+        self.delta = delta
 
         # 目前默认cpu
         delta = self._backprop_cpu1(delta)
 
         return delta
+
+    def cul_prime(self):
+        nabla_w = conv_cal_w(self.delta, self.input)
+        nabla_b = conv_cal_b(self.delta)
+        # print(self.delta.shape, self.input.shape, nabla_w.shape)
+        return nabla_w, nabla_b
 
     def _forward_cpu1(self, x):
 

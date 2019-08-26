@@ -9,6 +9,7 @@ from taurus.core.saver import Saver, Loader
 from taurus import optimizers
 from taurus import losses
 from taurus.utils.spe import spe
+from taurus.CNN import conv, pool, soft_max, pool_delta_error_bp
 
 
 class NewCNN(models.BaseModel):
@@ -21,6 +22,7 @@ class NewCNN(models.BaseModel):
         self.filters = []
         self.filters_biases = []
 
+        self.convs = []
         self.zs = []
         self.activations = []
 
@@ -47,7 +49,7 @@ class NewCNN(models.BaseModel):
                 self.layer_names.append(name)
 
         # 构建计算图节点，根据前向传播网络结构初始化权重
-        self.output = self._forward(self.input)
+        self.output, _ = self._forward(self.input)
 
         # 权重合并
         for name, layer in self.__dict__.items():
@@ -67,152 +69,116 @@ class NewCNN(models.BaseModel):
     def _define(self):
 
         self.input = Input(shape=(32,32,1))
+
         self.conv1 = Conv2D(filters=6, kernel_size=5, initializer='normal')
+        self.relu1 = Relu()
         self.pool1 = MaxPooling2D()
+
         self.conv2 = Conv2D(filters=16, kernel_size=5, initializer='normal')
+        self.relu2 = Relu()
         self.pool2 = MaxPooling2D()
+
         self.flatten = Flatten()
+
         self.fc1 = FC(units=120, activation=None, initializer='normal')
+        self.fc1_relu = Relu()
+
         self.fc2 = FC(units=84, activation=None, initializer='normal')
+        self.fc2_relu = Relu()
+
         self.fc3 = FC(units=10, activation=None, initializer='normal')
-        self.softmax = Softmax(name='softmax')
+
+        self.softmax = Softmax()
 
     def _forward(self, x):
 
         # 先前向传播，求出各中间量
         # 第一层卷积 28x28x6 0.003
         conv1 = self.conv1(x)
-        # print('conv1:{}'.format(conv1.shape))
 
         # 0.004
-        relu1 = relu(conv1)
+        relu1 = self.relu1(conv1)
 
         # 14x14x6 很慢 0.01 优化后 0.0001
         pool1 = self.pool1(relu1)
-        # print('pool1:{}'.format(pool1.shape))
 
         # 第二层卷积 10x10x16
         conv2 = self.conv2(pool1)
-        # print('conv2:{}'.format(conv2.shape))
 
-        relu2 = relu(conv2)
+        relu2 = self.relu2(conv2)
 
         # 5x5x16
         pool2 = self.pool2(relu2)
-        # print('pool2:{}'.format(pool2.shape))
 
         # 拉直 400x1
         flatten = self.flatten(pool2)
-        # spe(straight_input.shape, self.weights[0].shape)
 
         # 第一层全连接 120x1
         fc1_z = self.fc1(flatten)
-        fc1_a = relu(fc1_z)
+        fc1_a = self.fc1_relu(fc1_z)
 
-        # 第二层全连接 84x1
         fc2_z = self.fc2(fc1_a)
-        fc2_a = relu(fc2_z)
+        fc2_a = self.fc2_relu(fc2_z)
 
-        # 第三层全连接（输出） 10x1
         fc3_z = self.fc3(fc2_a)
-        fc3_a = softmax(fc3_z)
+        fc3_a = self.softmax(fc3_z)
 
-        outputs = fc3_a
+        output = fc3_a
 
-        return outputs
+        return output, [pool1, flatten, fc1_a, fc2_a]
 
     def _backprop(self, x, y):
 
         '''计算通过单幅图像求得梯度'''
         # time1 = time.time()
-
-        # 先前向传播，求出各中间量
-        # 第一层卷积 28x28x6 0.003
-        conv1 = self.conv1(x)
-        # print('conv1:{}'.format(conv1.shape))
-
-        # 0.004
-        relu1 = relu(conv1)
-
-        # 14x14x6 很慢 0.01 优化后 0.0001
-        pool1 = self.pool1(relu1)
-        # print('pool1:{}'.format(pool1.shape))
-
-        # 第二层卷积 10x10x16
-        conv2 = self.conv2(pool1)
-        # print('conv2:{}'.format(conv2.shape))
-
-        relu2 = relu(conv2)
-
-        # 5x5x16
-        pool2 = self.pool2(relu2)
-        # print('pool2:{}'.format(pool2.shape))
-
-        # 拉直 400x1
-        flatten = self.flatten(pool2)
-        # print(pool2)
-
-        # 第一层全连接 120x1
-        fc1_z = self.fc1(flatten)
-        fc1_a = relu(fc1_z)
-
-        fc2_z = self.fc2(fc1_a)
-        fc2_a = relu(fc2_z)
-
-        fc3_z = self.fc3(fc2_a)
-        fc3_a = self.softmax(fc3_z)
+        output, arr = self._forward(x)
 
         # print('forward:{}'.format(time.time() - time1))
         # time1 = time.time()
 
-        # 在这里我们使用交叉熵损失，激活函数为softmax，因此delta值就为 a-y，即对正确位置的预测值减1
-        cost = delta_fc3_a = fc3_a - y
-        # cost = delta_fc3_a = losses.CrossEntropy.fn(fc3_a, y)
+        # 在这里我们使用交叉熵损失，激活函数为softmax，因此delta值就为 a-y，即对正确位置的预测值减
+        cost = losses.L1Distance.fn(output, y)
 
-        # todo 反向传播回不去
-        delta_fc3_z = self.softmax.backprop(delta_fc3_a)
-        # delta_fc3_z = delta_fc3_a
-        delta_fc2_a = self.fc3.backprop(delta_fc3_z)
+        val = cost
 
-        delta_fc2_z = relu_prime(delta_fc2_a)
-        delta_fc1_a = self.fc2.backprop(delta_fc2_z)
+        layers_reversed = self.layers.copy()
+        layers_reversed.reverse()
 
-        delta_fc1_z = relu_prime(delta_fc1_a)
-        delta_flatten = self.fc1.backprop(delta_fc1_z)
+        for i, layer in enumerate(layers_reversed):
+            if layer.name not in ['input', 'output']:
 
-        delta_pool2 = delta_flatten.reshape(pool2.shape)
+                if layer.type == layer.ACTIVATION:
+                    val = val * layer.backprop()
+                else:
+                    val = layer.backprop(val)
 
-        delta_relu2 = self.pool2.backprop(delta_pool2)
-        delta_conv2 = relu_prime(delta_relu2)
-        delta_pool1 = self.conv2.backprop(delta_conv2)
+        # delta_fc3 = cost * self.softmax.backprop()
+        # delta_fc2 = self.fc3.backprop(delta_fc3) * self.fc2_relu.backprop()
+        # delta_fc1 = self.fc2.backprop(delta_fc2) * self.fc1_relu.backprop()
+        # delta_fla = self.fc1.backprop(delta_fc1)
+        #
+        # delta_pool2 = self.flatten.backprop(delta_fla)
+        #
+        # delta_conv2 = self.pool2.backprop(delta_pool2) * self.relu2.backprop()
+        # delta_pool1 = self.conv2.backprop(delta_conv2)
+        #
+        # delta_conv1 = self.pool1.backprop(delta_pool1) * self.relu1.backprop()
+        # delta_x     = self.conv1.backprop(delta_conv1)
 
-        delta_relu1 = self.pool1.backprop(delta_pool1)
-        delta_conv1 = relu_prime(delta_relu1)
-        delta_x = self.conv1.backprop(delta_conv1)
+        # 计算梯度
+        nabla_w, nabla_b, nabla_f, nabla_fb = [], [], [], []
 
-        # 求各参数的导数
-        nabla_w2 = np.dot(delta_fc3_z, fc2_a.transpose())
-        nabla_b2 = delta_fc3_z
-        nabla_w1 = np.dot(delta_fc2_z, fc1_a.transpose())
-        nabla_b1 = delta_fc2_z
-        nabla_w0 = np.dot(delta_fc1_z, flatten.transpose())
-        nabla_b0 = delta_fc1_z
+        for i, layer in enumerate(self.layers_avalible):
 
-        # time2 = time.time()
-        # 计算filter误差 占了反向传播一半时间  x->conv1 pool1->conv2
-        nabla_filters1 = conv_cal_w(delta_conv2, pool1)
-        nabla_filters0 = conv_cal_w(delta_conv1, x)
-        nabla_filters_biases1 = conv_cal_b(delta_conv2)
-        nabla_filters_biases0 = conv_cal_b(delta_conv1)
-        # print(nabla_filters0.shape, nabla_filters1.shape)
+            if layer.type == layer.CONV:
+                prime = layer.cul_prime()
+                nabla_f.append(prime[0])
+                nabla_fb.append(prime[1])
 
-        # print('test:{}'.format(time.time() - time2))
-
-        # 合并conv和fc的权重
-        nabla_w = [nabla_w0, nabla_w1, nabla_w2]
-        nabla_b = [nabla_b0, nabla_b1, nabla_b2]
-        nabla_f = [nabla_filters0, nabla_filters1]
-        nabla_fb = [nabla_filters_biases0, nabla_filters_biases1]
+            if layer.type == layer.FC:
+                prime = layer.cul_prime()
+                nabla_w.append(prime[0])
+                nabla_b.append(prime[1])
 
         # print('backprop:{}'.format(time.time() - time1))
 
@@ -222,6 +188,8 @@ class NewCNN(models.BaseModel):
 
         '''通过一个batch的数据对神经网络参数进行更新
         需要先求这个batch中每张图片的误差反向传播求得的权重梯度以及偏置梯度'''
+
+        # spe(self.filters[0].shape, self.weights[0].shape)
 
         nabla_w = [np.zeros(w.shape) for w in self.weights]
         nabla_b = [np.zeros(b.shape) for b in self.biases]
@@ -253,24 +221,15 @@ class NewCNN(models.BaseModel):
         self.filters_biases = [fb - (self.optimizer.learning_rate / self.batch_size) * nfb for fb, nfb in zip(self.filters_biases, nabla_fb)]
 
         # 更新全局权重到每一层 conv fc
-        conv_id, fc_id = 0, 0
-        for i, layer in enumerate(self.layers_avalible):
-
-            if layer.type == layer.CONV:
-                layer.weights = self.filters[conv_id].transpose(0, 3, 1, 2)
-                layer.biases = self.filters_biases[conv_id].transpose(1, 0)
-                conv_id += 1
-
-            if layer.type == layer.FC:
-                layer.weights = self.weights[fc_id]
-                layer.biases = self.biases[fc_id]
-                fc_id += 1
+        self._update_weights_to_avaliable_layers()
 
         # spe(self.conv1.W.shape, self.filters[0].shape, self.conv1.b.shape, self.filters_biases[0].shape)
 
         return cost_all
 
     def train(self, x, y, batch_size, epochs, x_valid=[], y_valid=[]):
+
+        starttime =time.time()
 
         self.x_batch = x
         self.y_batch = y
@@ -304,17 +263,21 @@ class NewCNN(models.BaseModel):
 
                 print("\rEpoch{0}:{1}/{2}".format(j + 1, batch_num * self.batch_size, len(x)), end=' ')
 
-            print("After epoch{0}: train_acc is {1}/{2}, val_acc is {3}/{4}, lost is {5:.4f}".format(j + 1, self._evaluate(x, y), len(y_valid), self._evaluate(x_valid, y_valid), len(y_valid), cost))
+            print("After epoch{0}: train_acc is {1}/{2}, val_acc is {3}/{4}, lost is {5:.4f}".format(j + 1, self._evaluate(x, y), len(x), self._evaluate(x_valid, y_valid), len(y_valid), cost))
+
+        print('total time:{:2f} m'.format((time.time() - starttime) / 60))
 
         return (accuracy_history, loss_history)
 
     def inference(self, x_batch):
 
+        starttime = time.time()
+
         y_batch = np.array([])
 
         for i in range(len(x_batch)):
 
-            y = self._forward(x_batch[i])
+            y, _ = self._forward(x_batch[i])
             if i == 0:
                 y_batch = np.array([np.zeros(shape=(y.shape))])
 
@@ -322,13 +285,15 @@ class NewCNN(models.BaseModel):
 
         y_batch = np.delete(y_batch, [0], axis=0)
 
+        print('inference time:{:4f}'.format(time.time() - starttime))
+
         return y_batch
 
     def _evaluate(self, x, y):
 
         result = 0
         for img, label in zip(x, y):
-            predict_label = self._forward(img)
+            predict_label, _ = self._forward(img)
             if np.argmax(predict_label) == np.argmax(label):
                 result += 1
 
@@ -386,6 +351,26 @@ class NewCNN(models.BaseModel):
         self.filters = filters
         self.filters_biases = filters_biases
 
+        # 更新全局权重到每一层 conv fc
+        self._update_weights_to_avaliable_layers()
+
+    def _update_weights_to_avaliable_layers(self):
+
+        # 更新全局权重到每一层 conv fc
+        conv_id, fc_id = 0, 0
+        for i, layer in enumerate(self.layers_avalible):
+
+            if layer.type == layer.CONV:
+                layer.weights = self.filters[conv_id].transpose(0, 3, 1, 2)
+                layer.biases = self.filters_biases[conv_id].transpose(1, 0)
+                conv_id += 1
+
+            if layer.type == layer.FC:
+                layer.weights = self.weights[fc_id]
+                layer.biases = self.biases[fc_id]
+                fc_id += 1
+
+
 # ---------------------------------------------------------------------
 
 class CNN(models.BaseModel):
@@ -434,7 +419,7 @@ class CNN(models.BaseModel):
                 self.layers_avalible.append(layer)
 
                 if layer.type == layer.CONV:
-                    self.filters.append(layer.weights.transpose(0, 2, 3, 1))
+                    self.filters.append(layer.weights.transpose(0, 3, 1, 2))
                     self.filters_biases.append(layer.biases.transpose(1, 0))
 
                 if layer.type == layer.FC:
@@ -577,8 +562,8 @@ class CNN(models.BaseModel):
         # time2 = time.time()
         # 计算filter误差 占了反向传播一半时间  x->conv1 pool1->conv2
         nabla_filters1 = conv_cal_w(delta_conv2, pool1)
-        nabla_filters0 = conv_cal_w(delta_conv1, x)
         nabla_filters_biases1 = conv_cal_b(delta_conv2)
+        nabla_filters0 = conv_cal_w(delta_conv1, x)
         nabla_filters_biases0 = conv_cal_b(delta_conv1)
         # print(nabla_filters0.shape, nabla_filters1.shape)
 

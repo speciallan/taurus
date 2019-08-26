@@ -10,15 +10,22 @@ class Flatten(operations.Operation):
 
     def __init__(self):
         super(Flatten, self).__init__()
+        self.type = self.FLATTEN
+        self.shape = None
 
     def __call__(self, inputs, *args, **kwargs):
 
         x = inputs
+        self.shape = x.shape
 
         flatten = x.reshape(x.shape[0] * x.shape[1] * x.shape[2], 1)
 
         return flatten
 
+    def backprop(self, x):
+
+        out = x.reshape(self.shape)
+        return out
 
 
 def im2col(input_data, filter_h, filter_w, stride=1, pad=0):

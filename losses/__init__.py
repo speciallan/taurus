@@ -11,7 +11,18 @@ class Loss(object):
         pass
 
 
-class CrossEntropy(object):
+class L1Distance(Loss):
+
+    def __init__(self):
+        super(L1Distance, self).__init__()
+
+    @staticmethod
+    def fn(y_pred, y_true):
+        # pred - true
+        return y_pred - y_true
+
+
+class CrossEntropy(Loss):
 
     def __init__(self):
         super(CrossEntropy, self).__init__()

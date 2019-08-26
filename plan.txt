@@ -31,3 +31,8 @@ taurus_board
 1、模型管理
 2、分布式
 3、远程监控训练过程
+
+problem
+1、relu、lr
+2、forward
+3、softmax

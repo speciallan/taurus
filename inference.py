@@ -50,7 +50,24 @@ def mlp_old():
     print(result)
 
 def cnn_new():
-    pass
+
+    data_path = config.data_path + '/MNIST/'
+    model_path = './model_weights_cnn.h5'
+
+    _, (X_test, y_test) = load_data(data_path)
+    x_batch = X_test[:20]
+
+    # MLP可以用784 做卷积需要28x28
+    x_batch = np.reshape(x_batch, (len(x_batch), 28, 28, 1))
+
+    x_batch = padding(x_batch, 2)  # 对初始图像进行零填充，保证与LeNet输入结构一致60000*32*32*1
+
+    model = NewCNN()
+    model.load_weights(model_path)
+
+    y_pred = model.inference(x_batch)
+    result = np.argmax(y_pred, axis=1)
+    print(result)
 
 def cnn_old():
 
