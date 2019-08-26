@@ -87,10 +87,10 @@ def new_cnn(args):
 
     X_train, X_valid, y_train, y_valid = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
 
-    X_train = X_train[:600]
-    y_train = y_train[:600]
-    X_valid = X_valid[:100]
-    y_valid = y_valid[:100]
+    # X_train = X_train[:6000]
+    # y_train = y_train[:6000]
+    # X_valid = X_valid[:1000]
+    # y_valid = y_valid[:1000]
 
     # MLP可以用784 做卷积需要28x28
     X_train = np.reshape(X_train, (len(X_train), 28, 28, 1))
@@ -99,6 +99,7 @@ def new_cnn(args):
     X_train = padding(X_train, 2)  # 对初始图像进行零填充，保证与LeNet输入结构一致60000*32*32*1
     X_valid = padding(X_valid, 2)
 
+    # 3e-5
     optimizer = SGD(learning_rate=3e-5)
     model = NewCNN()
     model.set_optimizer(optimizer)
@@ -106,7 +107,7 @@ def new_cnn(args):
     history = model.train(x=X_train,
                           y=y_train,
                           batch_size=100,
-                          epochs=10,
+                          epochs=2,
                           x_valid=X_valid,
                           y_valid=y_valid)
 

@@ -49,7 +49,7 @@ class NewCNN(models.BaseModel):
                 self.layer_names.append(name)
 
         # 构建计算图节点，根据前向传播网络结构初始化权重
-        self.output, _ = self._forward(self.input)
+        self.output = self._forward(self.input)
 
         # 权重合并
         for name, layer in self.__dict__.items():
@@ -83,7 +83,7 @@ class NewCNN(models.BaseModel):
         self.fc1 = FC(units=120, activation=None, initializer='normal')
         self.fc1_relu = Relu()
 
-        self.fc2 = FC(units=84, activation=None, initializer='normal')
+        self.fc2 = FC(units=50, activation=None, initializer='normal')
         self.fc2_relu = Relu()
 
         self.fc3 = FC(units=10, activation=None, initializer='normal')
@@ -125,13 +125,13 @@ class NewCNN(models.BaseModel):
 
         output = fc3_a
 
-        return output, [pool1, flatten, fc1_a, fc2_a]
+        return output
 
     def _backprop(self, x, y):
 
         '''计算通过单幅图像求得梯度'''
         # time1 = time.time()
-        output, arr = self._forward(x)
+        output = self._forward(x)
 
         # print('forward:{}'.format(time.time() - time1))
         # time1 = time.time()
@@ -151,19 +151,6 @@ class NewCNN(models.BaseModel):
                     val = val * layer.backprop()
                 else:
                     val = layer.backprop(val)
-
-        # delta_fc3 = cost * self.softmax.backprop()
-        # delta_fc2 = self.fc3.backprop(delta_fc3) * self.fc2_relu.backprop()
-        # delta_fc1 = self.fc2.backprop(delta_fc2) * self.fc1_relu.backprop()
-        # delta_fla = self.fc1.backprop(delta_fc1)
-        #
-        # delta_pool2 = self.flatten.backprop(delta_fla)
-        #
-        # delta_conv2 = self.pool2.backprop(delta_pool2) * self.relu2.backprop()
-        # delta_pool1 = self.conv2.backprop(delta_conv2)
-        #
-        # delta_conv1 = self.pool1.backprop(delta_pool1) * self.relu1.backprop()
-        # delta_x     = self.conv1.backprop(delta_conv1)
 
         # 计算梯度
         nabla_w, nabla_b, nabla_f, nabla_fb = [], [], [], []
@@ -202,10 +189,8 @@ class NewCNN(models.BaseModel):
         for x, y in zip(x_batch, y_batch):
 
             # time1 = time.time()
-            # print('--------', i)
             delta_nabla_w, delta_nabla_b, delta_nabla_f, delta_nabla_fb, cost = self._backprop(x, y)
             # print('{} backprop_total:{}'.format(i, time.time() - time1))
-            i += 1
             # spe(nabla_w[0].shape, delta_nabla_w[0].shape)
             # spe(nabla_f[0].shape, delta_nabla_f[0].shape)
 
@@ -277,7 +262,7 @@ class NewCNN(models.BaseModel):
 
         for i in range(len(x_batch)):
 
-            y, _ = self._forward(x_batch[i])
+            y = self._forward(x_batch[i])
             if i == 0:
                 y_batch = np.array([np.zeros(shape=(y.shape))])
 
@@ -293,7 +278,7 @@ class NewCNN(models.BaseModel):
 
         result = 0
         for img, label in zip(x, y):
-            predict_label, _ = self._forward(img)
+            predict_label = self._forward(img)
             if np.argmax(predict_label) == np.argmax(label):
                 result += 1
 
