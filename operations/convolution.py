@@ -101,7 +101,7 @@ class Conv2D(Conv):
 
         return delta
 
-    def cul_prime(self):
+    def cal_prime(self):
         nabla_w = conv_cal_w(self.delta, self.input)
         nabla_b = conv_cal_b(self.delta)
         # print(self.delta.shape, self.input.shape, nabla_w.shape)

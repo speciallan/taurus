@@ -128,8 +128,12 @@ class NewCNN(models.BaseModel):
         return output
 
     def _backprop(self, x, y):
+        """计算通过单幅图像求得梯度
+        forward  优化前0.06单x，优化后0.0005，提升100倍
+        backprop 优化前0.06单x，优化后0.008，提升10倍
+        总时间 0.12 -> 0.0085
+        """
 
-        '''计算通过单幅图像求得梯度'''
         # time1 = time.time()
         output = self._forward(x)
 
@@ -141,6 +145,7 @@ class NewCNN(models.BaseModel):
 
         val = cost
 
+        # 反向传播
         layers_reversed = self.layers.copy()
         layers_reversed.reverse()
 
@@ -154,18 +159,21 @@ class NewCNN(models.BaseModel):
 
         # 计算梯度
         nabla_w, nabla_b, nabla_f, nabla_fb = [], [], [], []
+        # time1 = time.time()
 
         for i, layer in enumerate(self.layers_avalible):
 
             if layer.type == layer.CONV:
-                prime = layer.cul_prime()
-                nabla_f.append(prime[0])
-                nabla_fb.append(prime[1])
+                w, b = layer.cal_prime()
+                nabla_f.append(w)
+                nabla_fb.append(b)
 
             if layer.type == layer.FC:
-                prime = layer.cul_prime()
-                nabla_w.append(prime[0])
-                nabla_b.append(prime[1])
+                w, b = layer.cal_prime()
+                nabla_w.append(w)
+                nabla_b.append(b)
+
+        # print('cal_prime:{}'.format(time.time() - time1))
 
         # print('backprop:{}'.format(time.time() - time1))
 
@@ -180,7 +188,6 @@ class NewCNN(models.BaseModel):
 
         nabla_w = [np.zeros(w.shape) for w in self.weights]
         nabla_b = [np.zeros(b.shape) for b in self.biases]
-
         nabla_f = [np.zeros(f.shape) for f in self.filters]
         nabla_fb = [np.zeros(fb.shape) for fb in self.filters_biases]
 
@@ -191,6 +198,7 @@ class NewCNN(models.BaseModel):
             # time1 = time.time()
             delta_nabla_w, delta_nabla_b, delta_nabla_f, delta_nabla_fb, cost = self._backprop(x, y)
             # print('{} backprop_total:{}'.format(i, time.time() - time1))
+            i += 1
             # spe(nabla_w[0].shape, delta_nabla_w[0].shape)
             # spe(nabla_f[0].shape, delta_nabla_f[0].shape)
 
@@ -238,10 +246,10 @@ class NewCNN(models.BaseModel):
                 if batch_num * self.batch_size > len(x):
                     batch_num = 1
 
-                # 12s
-                # time1 = time.time()
+                # 12s 优化后1.1s
+                time1 = time.time()
                 cost = self._update(x_batch, y_batch)
-                # print('update:{}'.format(time.time() - time1))
+                print('update:{}'.format(time.time() - time1))
 
                 # if batch_num % 100 == 0:
                 # print("after {0} training batch: accuracy is {1}/{2}".format(batch_num, self.evaluate(train_image[0:1000], train_label[0:1000]), len(train_image[0:1000])))

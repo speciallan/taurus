@@ -295,8 +295,7 @@ class MLP(models.BaseModel):
         return y
 
     def _backprop(self, x, y):
-
-        '''计算通过单幅图像求得的每层权重和偏置的梯度'''
+        """计算通过单幅图像求得的每层权重和偏置的梯度"""
         delta_nabla_b = [np.zeros(b.shape) for b in self.biases]
         delta_nabla_w = [np.zeros(w.shape) for w in self.weights]
 

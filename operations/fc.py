@@ -96,7 +96,7 @@ class FC(operations.Operation):
         delta = self._backprop_cpu(delta)
         return delta
 
-    def cul_prime(self):
+    def cal_prime(self):
         nabla_w = np.dot(self.delta, self.input.transpose())
         nabla_b = self.delta
         return nabla_w, nabla_b
