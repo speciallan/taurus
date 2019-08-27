@@ -18,7 +18,7 @@ class Flatten(operations.Operation):
         x = inputs
         self.shape = x.shape
 
-        flatten = x.reshape(x.shape[0] * x.shape[1] * x.shape[2], 1)
+        flatten = x.reshape(x.shape[0], x.shape[1] * x.shape[2] * x.shape[3], 1)
 
         return flatten
 

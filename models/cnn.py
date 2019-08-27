@@ -131,7 +131,10 @@ class NewCNN(models.BaseModel):
         """计算通过单幅图像求得梯度
         forward  优化前0.06单x，优化后0.0005，提升100倍
         backprop 优化前0.06单x，优化后0.008，提升10倍
-        总时间 0.12 -> 0.0085
+        单个x总时间 0.12 -> 0.0085
+        batch100 = 0.85
+
+        批处理后，100个x 1.5 = 单个x 0.015
         """
 
         # time1 = time.time()
@@ -165,6 +168,7 @@ class NewCNN(models.BaseModel):
 
             if layer.type == layer.CONV:
                 w, b = layer.cal_prime()
+                spe(w.shape)
                 nabla_f.append(w)
                 nabla_fb.append(b)
 
@@ -174,7 +178,6 @@ class NewCNN(models.BaseModel):
                 nabla_b.append(b)
 
         # print('cal_prime:{}'.format(time.time() - time1))
-
         # print('backprop:{}'.format(time.time() - time1))
 
         return nabla_w, nabla_b, nabla_f, nabla_fb, cost
@@ -186,32 +189,71 @@ class NewCNN(models.BaseModel):
 
         # spe(self.filters[0].shape, self.weights[0].shape)
 
+        # (120,400)
         nabla_w = [np.zeros(w.shape) for w in self.weights]
         nabla_b = [np.zeros(b.shape) for b in self.biases]
         nabla_f = [np.zeros(f.shape) for f in self.filters]
         nabla_fb = [np.zeros(fb.shape) for fb in self.filters_biases]
 
+        delta_nabla_w, delta_nabla_b, delta_nabla_f, delta_nabla_fb, cost = self._backprop(x_batch, y_batch)
+
+        # [print(i.shape) for i in nabla_w]
+        # [print(i.shape) for i in delta_nabla_w]
+        # print(len(delta_nabla_w[0]))
+        # exit()
+
+        # fc 3层权重，每一层里面batch=200，每层为(120,400)
+        # delta_nabla_w (3,200,120,400) nabla_w (3,120,400)
+        # nabla_w = [print(nw.shape, dnw.shape) for nw, dnw in zip(nabla_w, delta_nabla_w)]
+        # exit()
+
+        # 先把batch=200的所有delta加起来
+        # print(len(delta_nabla_w), len(delta_nabla_w[0]))
+        for i in range(len(delta_nabla_w)): # 3
+            for j in range(len(delta_nabla_w[0])): # 200
+                nabla_w[i] = nabla_w[i] + delta_nabla_w[i][j]
+                nabla_b[i] = nabla_b[i] + delta_nabla_b[i][j]
+            # nabla_w[i], nabla_b[i] = nabla_w[i] / 200, nabla_b[i] / 200
+
+        for i in range(len(delta_nabla_f)): # 3
+            for j in range(len(delta_nabla_f[0])): # 200
+                nabla_f[i] = nabla_f[i] + delta_nabla_f[i][j]
+                nabla_fb[i] = nabla_fb[i] + delta_nabla_fb[i][j]
+            # nabla_f[i], nabla_fb[i] = nabla_f[i] / 200, nabla_fb[i] / 200
+
+        # batch损失绝对值求和平均
         cost_all = 0
-        i = 0
-        for x, y in zip(x_batch, y_batch):
-
-            # time1 = time.time()
-            delta_nabla_w, delta_nabla_b, delta_nabla_f, delta_nabla_fb, cost = self._backprop(x, y)
-            # print('{} backprop_total:{}'.format(i, time.time() - time1))
-            i += 1
-            # spe(nabla_w[0].shape, delta_nabla_w[0].shape)
-            # spe(nabla_f[0].shape, delta_nabla_f[0].shape)
-
-            nabla_w = [nw + dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
-            nabla_b = [nb + dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
-            nabla_f = [nf + dnf for nf, dnf in zip(nabla_f, delta_nabla_f)]
-            nabla_fb = [nfb + dnfb for nfb, dnfb in zip(nabla_fb, delta_nabla_fb)]
-            cost_all += sum(abs(cost))[0]
+        for i in range(len(cost)):
+            cost_all += sum(abs(cost[i]))[0] / len(cost[i])
+        cost_all = cost_all / len(cost)
 
         self.weights = [w - (self.optimizer.learning_rate / self.batch_size) * nw for w, nw in zip(self.weights, nabla_w)]
         self.biases = [b - (self.optimizer.learning_rate / self.batch_size) * nb for b, nb in zip(self.biases, nabla_b)]
         self.filters = [f - (self.optimizer.learning_rate / self.batch_size) * nf for f, nf in zip(self.filters, nabla_f)]
         self.filters_biases = [fb - (self.optimizer.learning_rate / self.batch_size) * nfb for fb, nfb in zip(self.filters_biases, nabla_fb)]
+
+        # spe(nabla_w[0].shape, delta_nabla_w[0].shape)
+        # spe(22)
+
+        # for x, y in zip(x_batch, y_batch):
+        #
+        #     # time1 = time.time()
+        #     delta_nabla_w, delta_nabla_b, delta_nabla_f, delta_nabla_fb, cost = self._backprop(x, y)
+        #     # print('{} backprop_total:{}'.format(i, time.time() - time1))
+        #     i += 1
+        #     # spe(nabla_w[0].shape, delta_nabla_w[0].shape)
+        #     # spe(nabla_f[0].shape, delta_nabla_f[0].shape)
+        #
+        #     nabla_w = [nw + dnw for nw, dnw in zip(nabla_w, delta_nabla_w)]
+        #     nabla_b = [nb + dnb for nb, dnb in zip(nabla_b, delta_nabla_b)]
+        #     nabla_f = [nf + dnf for nf, dnf in zip(nabla_f, delta_nabla_f)]
+        #     nabla_fb = [nfb + dnfb for nfb, dnfb in zip(nabla_fb, delta_nabla_fb)]
+        #     cost_all += sum(abs(cost))[0]
+
+        # self.weights = [w - (self.optimizer.learning_rate / self.batch_size) * nw for w, nw in zip(self.weights, nabla_w)]
+        # self.biases = [b - (self.optimizer.learning_rate / self.batch_size) * nb for b, nb in zip(self.biases, nabla_b)]
+        # self.filters = [f - (self.optimizer.learning_rate / self.batch_size) * nf for f, nf in zip(self.filters, nabla_f)]
+        # self.filters_biases = [fb - (self.optimizer.learning_rate / self.batch_size) * nfb for fb, nfb in zip(self.filters_biases, nabla_fb)]
 
         # 更新全局权重到每一层 conv fc
         self._update_weights_to_avaliable_layers()
@@ -233,11 +275,13 @@ class NewCNN(models.BaseModel):
 
         accuracy_history = []
         loss_history = []
-        cost = 0
 
         batch_num = 0
         for j in range(epochs):
 
+            cost = 0
+
+            # 切分数据集到多个batch
             x_batches = [x[k:k + self.batch_size] for k in range(0, len(x), self.batch_size)]
             y_batches = [y[k:k + self.batch_size] for k in range(0, len(y), self.batch_size)]
 
@@ -247,16 +291,16 @@ class NewCNN(models.BaseModel):
                     batch_num = 1
 
                 # 12s 优化后1.1s
-                time1 = time.time()
-                cost = self._update(x_batch, y_batch)
-                print('update:{}'.format(time.time() - time1))
+                # time1 = time.time()
+                cost += self._update(x_batch, y_batch)
+                # print('update:{}'.format(time.time() - time1))
 
                 # if batch_num % 100 == 0:
                 # print("after {0} training batch: accuracy is {1}/{2}".format(batch_num, self.evaluate(train_image[0:1000], train_label[0:1000]), len(train_image[0:1000])))
 
                 print("\rEpoch{0}:{1}/{2}".format(j + 1, batch_num * self.batch_size, len(x)), end=' ')
 
-            print("After epoch{0}: train_acc is {1}/{2}, val_acc is {3}/{4}, lost is {5:.4f}".format(j + 1, self._evaluate(x, y), len(x), self._evaluate(x_valid, y_valid), len(y_valid), cost))
+            print("After epoch{0}: train_acc is {1}/{2}, val_acc is {3}/{4}, loss is {5:.4f}".format(j + 1, self._evaluate(x, y), len(x), self._evaluate(x_valid, y_valid), len(y_valid), cost))
 
         print('total time:{:2f} m'.format((time.time() - starttime) / 60))
 
@@ -266,17 +310,14 @@ class NewCNN(models.BaseModel):
 
         starttime = time.time()
 
-        y_batch = np.array([])
-
-        for i in range(len(x_batch)):
-
-            y = self._forward(x_batch[i])
-            if i == 0:
-                y_batch = np.array([np.zeros(shape=(y.shape))])
-
-            y_batch = np.append(y_batch, [y], axis=0)
-
-        y_batch = np.delete(y_batch, [0], axis=0)
+        y_batch = self._forward(x_batch)
+        # y_batch = np.array([])
+        # for i in range(len(x_batch)):
+        #     y = self._forward(x_batch[i])
+        #     if i == 0:
+        #         y_batch = np.array([np.zeros(shape=(y.shape))])
+        #     y_batch = np.append(y_batch, [y], axis=0)
+        # y_batch = np.delete(y_batch, [0], axis=0)
 
         print('inference time:{:4f}'.format(time.time() - starttime))
 
@@ -284,11 +325,15 @@ class NewCNN(models.BaseModel):
 
     def _evaluate(self, x, y):
 
-        result = 0
-        for img, label in zip(x, y):
-            predict_label = self._forward(img)
-            if np.argmax(predict_label) == np.argmax(label):
-                result += 1
+        predict_label = self._forward(x)
+
+        result = [1 if np.argmax(predict_label[i]) == np.argmax(y[i]) else 0 for i in range(len(x))]
+        result = sum(result)
+
+        # for img, label in zip(x, y):
+        #     predict_label = self._forward(img)
+        #     if np.argmax(predict_label) == np.argmax(label):
+        #         result += 1
 
         return result
 

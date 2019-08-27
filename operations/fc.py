@@ -46,7 +46,7 @@ class FC(operations.Operation):
         # 初始化权重
         if not self.has_inited:
 
-            self.in_size = x.size
+            self.in_size = x.shape[1]
             self.out_size = self.units
 
             # print(x.ndim, x.shape, x.size)
@@ -64,6 +64,7 @@ class FC(operations.Operation):
         # 激活函数
         self.outputs = self._forward_cpu(x)
 
+        # 暂时没用了，使用激活层
         if self.activation is not None:
 
             if self.activation == 'sigmoid':
@@ -97,17 +98,32 @@ class FC(operations.Operation):
         return delta
 
     def cal_prime(self):
-        nabla_w = np.dot(self.delta, self.input.transpose())
-        nabla_b = self.delta
+
+        nabla_w, nabla_b = [], []
+
+        for i in range(self.delta.shape[0]):
+            nabla_w.append(np.dot(self.delta[i], self.input[i].transpose()))
+            nabla_b.append(self.delta[i])
+
+        nabla_w, nabla_b = np.asarray(nabla_w), np.asarray(nabla_b)
+
         return nabla_w, nabla_b
 
     def _forward_cpu(self, x):
-        x = np.dot(self.weights, x) + self.biases
-        return x
+        """cpu通过循环实现，也可以通过多进程并行计算
+        fc层如果合并到一起计算量太大(80000,1)->(200,400,1)，循环跑比较好"""
+        out = []
+        for i in range(x.shape[0]):
+            out.append(np.dot(self.weights, x[i]) + self.biases)
+        out = np.asarray(out)
+        return out
 
     def _backprop_cpu(self, delta):
-        delta = np.dot(self.weights.transpose(), delta)
-        return delta
+        out = []
+        for i in range(delta.shape[0]):
+            out.append(np.dot(self.weights.transpose(), delta[i]))
+        out = np.asarray(out)
+        return out
 
     def _init_weights(self):
 

@@ -111,6 +111,15 @@ def relu_prime(feature, version=0):  # 对relu函数的求导
     return relu_prime_out
 
 
+def softmax(z):
+    tmp = np.max(z)
+    z -= tmp  # 用于缩放每行的元素，避免溢出，有效
+    z = np.exp(z)
+    tmp = np.sum(z)
+    z /= tmp
+    return z
+
+
 # https://blog.csdn.net/weixin_37251044/article/details/81206236
 class Softmax(Activation):
 

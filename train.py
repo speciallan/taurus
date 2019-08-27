@@ -87,10 +87,10 @@ def new_cnn(args):
 
     X_train, X_valid, y_train, y_valid = train_test_split(X_train, y_train, test_size=0.2, random_state=42)
 
-    X_train = X_train[:1000]
-    y_train = y_train[:1000]
-    X_valid = X_valid[:1000]
-    y_valid = y_valid[:1000]
+    X_train = X_train[:600]
+    y_train = y_train[:600]
+    X_valid = X_valid[:100]
+    y_valid = y_valid[:100]
 
     # MLP可以用784 做卷积需要28x28
     X_train = np.reshape(X_train, (len(X_train), 28, 28, 1))
@@ -106,7 +106,7 @@ def new_cnn(args):
 
     history = model.train(x=X_train,
                           y=y_train,
-                          batch_size=200,
+                          batch_size=100,
                           epochs=10,
                           x_valid=X_valid,
                           y_valid=y_valid)

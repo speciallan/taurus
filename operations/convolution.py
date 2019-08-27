@@ -65,7 +65,7 @@ class Conv2D(Conv):
         # 初始化权重
         if not self.has_inited:
 
-            h, w, c = x.shape
+            n, h, w, c = x.shape
             self.in_channel = c
             self.out_channel = self.filters
 
@@ -77,7 +77,7 @@ class Conv2D(Conv):
             self.has_inited = True
 
         self.input = x
-        out = self._forward_cpu1(x)
+        out = self._forward_cpu(x)
 
         return out
 
@@ -97,21 +97,29 @@ class Conv2D(Conv):
         self.delta = delta
 
         # 目前默认cpu
-        delta = self._backprop_cpu1(delta)
+        delta = self._backprop_cpu(delta)
 
         return delta
 
     def cal_prime(self):
-        nabla_w = conv_cal_w(self.delta, self.input)
-        nabla_b = conv_cal_b(self.delta)
+
+        nabla_w, nabla_b = [], []
+
+        for i in range(self.delta.shape[0]):
+            nabla_w.append(conv_cal_w(self.delta[i], self.input[i]))
+            nabla_b.append(conv_cal_b(self.delta[i]))
+
+        nabla_w, nabla_b = np.asarray(nabla_w), np.asarray(nabla_b)
         # print(self.delta.shape, self.input.shape, nabla_w.shape)
         return nabla_w, nabla_b
 
-    def _forward_cpu1(self, x):
+    def _forward_cpu(self, x):
 
         # print('w', self.weights.shape, 'b', self.biases.shape)
 
-        x = np.expand_dims(x, axis=0)
+        if x.ndim == 3:
+            x = np.expand_dims(x, axis=0)
+
         x = x.transpose(0, 3, 1, 2)
 
         # (1,1,32,32) (6,1,5,5)
@@ -146,14 +154,16 @@ class Conv2D(Conv):
         self.col = col
         self.col_W = col_W
 
-        out = out.transpose(0, 2, 3, 1)[0]
+        out = out.transpose(0, 2, 3, 1)
 
         return out
 
-    def _backprop_cpu1(self, dout):
+    def _backprop_cpu(self, dout):
 
         # (1,16,10,10)
-        dout = np.expand_dims(dout, axis=0)
+        if dout.ndim == 3:
+            dout = np.expand_dims(dout, axis=0)
+
         dout = dout.transpose(0, 3, 1, 2)
 
         # 卷积核大小
@@ -171,12 +181,12 @@ class Conv2D(Conv):
         # 逆转换
         dx = col2im(dcol, self.x.shape, FH, FW, self.stride, self.pad)
 
-        # (1,6,14,14) -> (14,14,6)
-        dx = dx.transpose(0, 2, 3, 1)[0]
+        # (1,6,14,14) -> (1,14,14,6)
+        dx = dx.transpose(0, 2, 3, 1)
 
         return dx
 
-    def _forward_cpu(self, img):
+    def _forward_cpu_backup(self, img):
 
         # time1 = time.time()
 
@@ -257,8 +267,10 @@ def add_bias(conv, bias):
 
 def conv_cal_w(out_img_delta, in_img):
     # 由卷积前的图片以及卷积后的delta计算卷积核的梯度
-    nabla_conv = np.zeros([out_img_delta.shape[-1], in_img.shape[0] - out_img_delta.shape[0] + 1,
-                           in_img.shape[1] - out_img_delta.shape[1] + 1, in_img.shape[-1]])
+    nabla_conv = np.zeros([out_img_delta.shape[-1],
+                           in_img.shape[0] - out_img_delta.shape[0] + 1,
+                           in_img.shape[1] - out_img_delta.shape[1] + 1,
+                           in_img.shape[-1]])
     for filter_num in range(nabla_conv.shape[0]):
         for ch_num in range(nabla_conv.shape[-1]):
             nabla_conv[filter_num, :, :, ch_num] = conv_(in_img[:, :, ch_num], out_img_delta[:, :, filter_num])

@@ -54,7 +54,7 @@ class MaxPooling2D(Pooling2D):
         feature = inputs
 
         # pool_out, pool_out_max_location = self._forward_cpu(feature)
-        pool_out = self._forward_cpu1(feature)
+        pool_out = self._forward_cpu(feature)
 
         # print('pooling:{}'.format(time.time() - time1))
 
@@ -64,13 +64,15 @@ class MaxPooling2D(Pooling2D):
 
         # 目前默认cpu
         # delta = self._backprop_cpu(pool_out_delta, pool_out_max_location)
-        delta = self._backprop_cpu1(pool_out_delta)
+        delta = self._backprop_cpu(pool_out_delta)
 
         return delta
 
-    def _forward_cpu1(self, x):
+    def _forward_cpu(self, x):
 
-        x = np.expand_dims(x, axis=0)
+        if x.ndim == 3:
+            x = np.expand_dims(x, axis=0)
+
         x = x.transpose(0, 3, 1, 2)
 
         N, C, H, W = x.shape
@@ -94,13 +96,15 @@ class MaxPooling2D(Pooling2D):
         self.arg_max = arg_max
 
         # 还原shape
-        out = out.transpose(0, 2, 3, 1)[0]
+        out = out.transpose(0, 2, 3, 1)
 
         return out
 
-    def _backprop_cpu1(self, dout):
+    def _backprop_cpu(self, dout):
 
-        dout = np.expand_dims(dout, axis=0)
+        if dout.ndim == 3:
+            dout = np.expand_dims(dout, axis=0)
+
         dout = dout.transpose(0, 3, 1, 2)
 
         pool_size = self.pool_h * self.pool_w
@@ -112,11 +116,11 @@ class MaxPooling2D(Pooling2D):
         dx = col2im(dcol, self.x.shape, self.pool_h, self.pool_w, self.stride, self.pad)
 
         # 还原shape
-        dx = dx.transpose(0, 2, 3, 1)[0]
+        dx = dx.transpose(0, 2, 3, 1)
 
         return dx
 
-    def _forward_cpu(self, feature):
+    def _forward_cpu_backup(self, feature):
 
         """最大池化操作
         同时输出池化后的结果以及用于记录最大位置的张量，方便之后delta误差反向传播"""
@@ -140,7 +144,7 @@ class MaxPooling2D(Pooling2D):
 
         return pool_out, pool_out_max_location
 
-    def _backprop_cpu(self, pool_out_delta, pool_out_max_location):
+    def _backprop_cpu_backup(self, pool_out_delta, pool_out_max_location):
 
         delta = np.zeros([np.uint16((pool_out_delta.shape[0] - 1) * self.stride + self.size),
                           np.uint16((pool_out_delta.shape[1] - 1) * self.stride + self.size),
