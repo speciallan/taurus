@@ -13,6 +13,7 @@ from taurus.models.cnn import CNN, NewCNN
 from taurus.models.model import Model
 from taurus.optimizers import SGD
 from taurus.operations import FC
+from taurus import losses
 from taurus.preprocessing.generators import ImageGenerator
 from taurus.config import current_config as config
 from sklearn.model_selection import train_test_split
@@ -100,7 +101,8 @@ def new_cnn(args):
     X_valid = padding(X_valid, 2)
 
     # 3e-5
-    optimizer = SGD(learning_rate=3e-5)
+    optimizer = SGD(learning_rate=3e-5, loss='l1')
+    # optimizer = SGD(learning_rate=3e-5, loss=losses.CROSS_ENTROPY)
     model = NewCNN()
     model.set_optimizer(optimizer)
 

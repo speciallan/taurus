@@ -58,6 +58,10 @@ class FC(operations.Operation):
             self._init_weights()
             self.has_inited = True
 
+        # conv是3->4，fc是2->3
+        if x.ndim == 2:
+            x = np.expand_dims(x, axis=0)
+
         # 记录输入
         self.input = x
 
@@ -66,6 +70,7 @@ class FC(operations.Operation):
 
         # 暂时没用了，使用激活层
         if self.activation is not None:
+            pass
 
             if self.activation == 'sigmoid':
                 self.activation_func = sigmoid
@@ -119,6 +124,7 @@ class FC(operations.Operation):
         return out
 
     def _backprop_cpu(self, delta):
+        """反向传播 乘转置矩阵"""
         out = []
         for i in range(delta.shape[0]):
             out.append(np.dot(self.weights.transpose(), delta[i]))

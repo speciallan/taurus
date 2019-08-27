@@ -76,6 +76,9 @@ class Conv2D(Conv):
             self._init_weights()
             self.has_inited = True
 
+        if x.ndim == 3:
+            x = np.expand_dims(x, axis=0)
+
         self.input = x
         out = self._forward_cpu(x)
 

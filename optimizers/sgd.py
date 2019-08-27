@@ -7,8 +7,9 @@ from taurus import optimizers
 
 class SGD(optimizers.Optimizer):
 
-    def __init__(self, learning_rate=0.001):
+    def __init__(self, learning_rate=0.001, loss='l1'):
         self.learning_rate = learning_rate
+        self.loss = loss
 
     def __call__(self, *args, **kwargs):
         pass

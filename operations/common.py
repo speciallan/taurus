@@ -16,6 +16,7 @@ class Flatten(operations.Operation):
     def __call__(self, inputs, *args, **kwargs):
 
         x = inputs
+
         self.shape = x.shape
 
         flatten = x.reshape(x.shape[0], x.shape[1] * x.shape[2] * x.shape[3], 1)

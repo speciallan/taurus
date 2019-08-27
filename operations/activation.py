@@ -48,6 +48,7 @@ class Relu(Activation):
         self.x = np.array([])
 
     def __call__(self, x, *args, **kwargs):
+
         self.x = x
         out = relu(x)
         return out

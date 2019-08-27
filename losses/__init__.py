@@ -4,6 +4,22 @@
 
 import numpy as np
 
+L1 = 'l1'
+CROSS_ENTROPY = 'cross_entropy'
+
+
+def get_loss_obj(loss_name):
+
+    loss_obj = None
+
+    if loss_name == L1:
+        loss_obj = L1Distance()
+
+    if loss_name == CROSS_ENTROPY:
+        loss_obj = CrossEntropy()
+
+    return loss_obj
+
 
 class Loss(object):
 

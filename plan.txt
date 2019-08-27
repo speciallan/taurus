@@ -5,16 +5,26 @@ taurus
 2、实现卷积、池化，训练预测评估，save load model。
 卷积池化效率太低了，进行优化。 im2col、池化计算方法、批处理、多线程。
 没优化一个epoch需要1h，优化后10min
+forward  优化前0.06单x，优化后0.0005，提升100倍
+backprop 优化前0.06单x，优化后0.008，提升10倍
+单个x总时间 0.12 -> 0.0085
+
+轮训x_batch=100 update = 1.8
+批处理后，100个x 1.5 = 单个x 0.015 ， 优化有效
+
 https://blog.csdn.net/Daycym/article/details/83826222
+
 3、实现图、动态构建、前后传播、sgd
 https://blog.csdn.net/Calcular/article/details/80976384
 https://www.bilibili.com/video/av9770302/?p=3
+
 4、激活函数、损失优化
 5、卷积优化、多线程
 6、通过taurus实现布匹项目。
 7、gpu实现。
 8、静态图实现
 9、模型可视化、训练监控
+10、深度学习平台
 
 taurus_cv
 1、faster r-cnn
@@ -33,6 +43,4 @@ taurus_board
 3、远程监控训练过程
 
 problem
-1、relu、lr
-2、forward
-3、softmax
+1、现在所有权重保存在对象里，内存空间不连续，可以优化。

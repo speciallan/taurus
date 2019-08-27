@@ -26,8 +26,10 @@ class NewCNN(models.BaseModel):
         self.zs = []
         self.activations = []
 
+        # 定义网络
         self._define()
 
+        # 构建网络
         self._build()
 
     def __call__(self, inputs, *args, **kwargs):
@@ -132,9 +134,9 @@ class NewCNN(models.BaseModel):
         forward  优化前0.06单x，优化后0.0005，提升100倍
         backprop 优化前0.06单x，优化后0.008，提升10倍
         单个x总时间 0.12 -> 0.0085
-        batch100 = 0.85
 
-        批处理后，100个x 1.5 = 单个x 0.015
+        轮训x_batch=100 update = 1.8
+        批处理后，100个x 1.5 = 单个x 0.015 ， 优化有效
         """
 
         # time1 = time.time()
@@ -143,8 +145,8 @@ class NewCNN(models.BaseModel):
         # print('forward:{}'.format(time.time() - time1))
         # time1 = time.time()
 
-        # 在这里我们使用交叉熵损失，激活函数为softmax，因此delta值就为 a-y，即对正确位置的预测值减
-        cost = losses.L1Distance.fn(output, y)
+        # loss
+        cost = losses.get_loss_obj(self.optimizer.loss).fn(output, y)
 
         val = cost
 
@@ -168,7 +170,6 @@ class NewCNN(models.BaseModel):
 
             if layer.type == layer.CONV:
                 w, b = layer.cal_prime()
-                spe(w.shape)
                 nabla_f.append(w)
                 nabla_fb.append(b)
 
@@ -225,7 +226,7 @@ class NewCNN(models.BaseModel):
         cost_all = 0
         for i in range(len(cost)):
             cost_all += sum(abs(cost[i]))[0] / len(cost[i])
-        cost_all = cost_all / len(cost)
+        # cost_all = cost_all / len(cost)
 
         self.weights = [w - (self.optimizer.learning_rate / self.batch_size) * nw for w, nw in zip(self.weights, nabla_w)]
         self.biases = [b - (self.optimizer.learning_rate / self.batch_size) * nb for b, nb in zip(self.biases, nabla_b)]
@@ -291,9 +292,9 @@ class NewCNN(models.BaseModel):
                     batch_num = 1
 
                 # 12s 优化后1.1s
-                # time1 = time.time()
+                time1 = time.time()
                 cost += self._update(x_batch, y_batch)
-                # print('update:{}'.format(time.time() - time1))
+                print('update:{}'.format(time.time() - time1))
 
                 # if batch_num % 100 == 0:
                 # print("after {0} training batch: accuracy is {1}/{2}".format(batch_num, self.evaluate(train_image[0:1000], train_label[0:1000]), len(train_image[0:1000])))
