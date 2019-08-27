@@ -29,7 +29,7 @@ def cupy():
     # x_gpu = cp.array([1, 2, 3])
 
     x_cpu = np.random.randn(30000, 30000).astype(np.float32)
-    x_gpu = cp.asarray(x_cpu)
+    _gpu = cp.asarray(x_cpu)
 
     time1 = time.time()
     t1 = np.dot(x_cpu, x_cpu)
@@ -54,5 +54,5 @@ def test():
 
 
 if __name__ == '__main__':
-    # cupy()
-    test()
+    cupy()
+    # test()
