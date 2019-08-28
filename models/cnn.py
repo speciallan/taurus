@@ -265,8 +265,6 @@ class NewCNN(models.BaseModel):
 
     def train(self, x, y, batch_size, epochs, x_valid=[], y_valid=[]):
 
-        starttime =time.time()
-
         self.x_batch = x
         self.y_batch = y
         self.batch_size = batch_size
@@ -278,9 +276,12 @@ class NewCNN(models.BaseModel):
         loss_history = []
 
         batch_num = 0
+        print('Epoch train_acc val_acc')
+
         for j in range(epochs):
 
             cost = 0
+            starttime = time.time()
 
             # 切分数据集到多个batch
             x_batches = [x[k:k + self.batch_size] for k in range(0, len(x), self.batch_size)]
@@ -292,18 +293,18 @@ class NewCNN(models.BaseModel):
                     batch_num = 1
 
                 # 12s 优化后1.1s
-                time1 = time.time()
                 cost += self._update(x_batch, y_batch)
-                print('update:{}'.format(time.time() - time1))
+                # print('update:{}'.format(time.time() - time1))
 
                 # if batch_num % 100 == 0:
                 # print("after {0} training batch: accuracy is {1}/{2}".format(batch_num, self.evaluate(train_image[0:1000], train_label[0:1000]), len(train_image[0:1000])))
 
                 print("\rEpoch{0}:{1}/{2}".format(j + 1, batch_num * self.batch_size, len(x)), end=' ')
 
-            print("After epoch{0}: train_acc is {1}/{2}, val_acc is {3}/{4}, loss is {5:.4f}".format(j + 1, self._evaluate(x, y), len(x), self._evaluate(x_valid, y_valid), len(y_valid), cost))
+            total_time = time.time() - starttime
+            print("After epoch{0}: train_acc is {1}/{2}, val_acc is {3}/{4}, loss is {5:.4f}, time:{6:.2f}".format(j + 1, self._evaluate(x, y), len(x), self._evaluate(x_valid, y_valid), len(y_valid), cost, total_time))
 
-        print('total time:{:2f} m'.format((time.time() - starttime) / 60))
+        # print('total time:{:2f} m'.format((time.time() - starttime) / 60))
 
         return (accuracy_history, loss_history)
 

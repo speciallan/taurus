@@ -80,6 +80,7 @@ class Conv2D(Conv):
             x = np.expand_dims(x, axis=0)
 
         self.input = x
+
         out = self._forward_cpu(x)
 
         return out
@@ -100,9 +101,9 @@ class Conv2D(Conv):
         self.delta = delta
 
         # 目前默认cpu
-        delta = self._backprop_cpu(delta)
+        out = self._backprop_cpu(delta)
 
-        return delta
+        return out
 
     def cal_prime(self):
 
@@ -177,7 +178,6 @@ class Conv2D(Conv):
         self.db = np.sum(dout, axis=0)
         self.dW = np.dot(self.col.T, dout)
         self.dW = self.dW.transpose(1, 0).reshape(FN, C, FH, FW)
-        # print(self.dW.shape, self.db.shape)
 
         dcol = np.dot(dout, self.col_W.T)
 
@@ -269,14 +269,18 @@ def add_bias(conv, bias):
     return conv
 
 def conv_cal_w(out_img_delta, in_img):
+    # (32, 32, 1)(28, 28, 6)
     # 由卷积前的图片以及卷积后的delta计算卷积核的梯度
     nabla_conv = np.zeros([out_img_delta.shape[-1],
                            in_img.shape[0] - out_img_delta.shape[0] + 1,
                            in_img.shape[1] - out_img_delta.shape[1] + 1,
                            in_img.shape[-1]])
+
+    # print(nabla_conv.shape)
     for filter_num in range(nabla_conv.shape[0]):
         for ch_num in range(nabla_conv.shape[-1]):
             nabla_conv[filter_num, :, :, ch_num] = conv_(in_img[:, :, ch_num], out_img_delta[:, :, filter_num])
+
     return nabla_conv
 
 
@@ -287,6 +291,9 @@ def conv_cal_b(out_img_delta):
     return nabla_b
 
 def conv_(img, filters):
+    # (14, 14) (10, 10)
+    # print(img.shape, filters.shape)
+
     # 对二维图像以及二维卷积核进行卷积，不填充
     img_h, img_w = img.shape
     filter_h, filter_w = filters.shape
@@ -294,12 +301,15 @@ def conv_(img, filters):
     feature_w = img_w - filter_w + 1
 
     img_matrix = np.zeros((feature_h * feature_w, filter_h * filter_w))
+
     for i in range(feature_h * feature_w):
         img_matrix[i:] = img[np.uint16(i / feature_w):np.uint16(i / feature_w + filter_h),
                          np.uint16(i % feature_w):np.uint16(i % feature_w + filter_w)].reshape(filter_w * filter_h)
+
     filter_matrix = filters.reshape(filter_h * filter_w, 1)
 
     img_out = np.dot(img_matrix, filter_matrix)
+    # print(img_out.shape)
 
     img_out = img_out.reshape(feature_h, feature_w)
 
