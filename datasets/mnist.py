@@ -3,10 +3,17 @@
 # Author:Speciallan
 
 import numpy as np
+import time
 from struct import unpack, unpack_from
 
 
 def load_data(path):
+    """
+    0.05s by cpu single core
+    [todo] multi processing
+    """
+
+    # time1 = time.time()
 
     X_train = read_image(path + 'train-images-idx3-ubyte')
     y_train = read_label(path + 'train-labels-idx1-ubyte')
@@ -20,6 +27,8 @@ def load_data(path):
     X_test = normalize(X_test)
     y_test = one_hot(y_test)
     y_test = y_test.reshape(y_test.shape[0], y_test.shape[1], 1)
+
+    # print(f'load data time:{time.time() - time1}')
 
     return (X_train, y_train), (X_test, y_test)
 
